@@ -1,0 +1,311 @@
+import React, {useState, useEffect, useCallback} from 'react'
+
+import {
+    StyleSheet,
+    View,
+    SafeAreaView,
+    ScrollView,
+    RefreshControl,
+    ActivityIndicator,
+} from 'react-native'
+import {
+    Icon,
+    Text,
+    ListItem,
+    CheckBox,
+    Overlay,
+    Input,
+    Button,
+} from 'react-native-elements'
+
+import {connect} from 'react-redux'
+
+import WifiManager from 'react-native-wifi-reborn'
+
+import AsyncStorage from '@react-native-community/async-storage'
+
+import {RNToasty} from 'react-native-toasty'
+
+import {setWifiName} from '../../../redux/actions/wifiReducer'
+import {setWifiIP} from '../../../redux/actions/wifiReducer'
+
+import {connectToWifi} from '../../../utils/wifi/wifi'
+
+import {encryptPassword} from '../../../utils/encrypt/password'
+
+const styles = StyleSheet.create({
+    root: {
+        flex: 1,
+        marginTop: 10,
+        marginBottom: 10,
+    },
+    settings: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexDirection: 'row',
+        marginTop: 20,
+        marginBottom: 20,
+    },
+    listItem: {
+        shadowColor: '#000',
+        shadowOffset: {width: 0, height: 1},
+        shadowOpacity: 0.8,
+        shadowRadius: 2,
+        elevation: 5,
+        padding: 2.5,
+        margin: 3,
+        marginTop: 5,
+        marginBottom: 5,
+    },
+    green: {
+        backgroundColor: 'green',
+    },
+    black: {
+        backgroundColor: 'black',
+    },
+})
+
+const Wifi = (props) => {
+    const {setWifi, settings, wifi} = props
+
+    const [wifiList, setWifiList] = useState(null)
+    const [wifiSettingsOverlay, setWifiSettingsOverlay] = useState(false)
+    const [wifiPasswordOverlay, setWifiPasswordOverlay] = useState(false)
+    const [wifiConnect, setWifiConnect] = useState(null)
+    const [wifiPassword, setWifiPassword] = useState('')
+    const [autoConnectWifi, setAutoConnectWifi] = useState(
+        settings.autoWifi || false,
+    )
+    const [credentials, setCredentials] = useState(settings.credentials)
+
+    const [refreshing, setRefreshing] = useState(false)
+
+    const onRefresh = useCallback(async () => {
+        setRefreshing(true)
+
+        const getWifiList = await WifiManager.reScanAndLoadWifiList()
+        setWifiList(JSON.parse(getWifiList))
+
+        setRefreshing(false)
+    }, [refreshing])
+
+    useEffect(() => {
+        const getData = async () => {
+            try {
+                const getWifiList = JSON.parse(await WifiManager.loadWifiList())
+                setWifiList(getWifiList)
+            } catch (e) {
+                console.warn(e)
+            }
+        }
+        getData()
+    }, [])
+
+    const handleConnectWifi = async (d) => {
+        const data = d || wifiConnect
+        const obj = {
+            SSID: data.SSID,
+            password: wifiPassword,
+            isWep: data.credentials ? true : false,
+        }
+        const connected = await connectToWifi(obj)
+        if (connected) {
+            setWifi({name: obj.SSID, ip: await WifiManager.getIP()})
+            if (wifiName.includes('ESP')) {
+                console.log('forcing wifi usage')
+                await WifiManager.forceWifiUsage(true)
+            }
+        }
+    }
+
+    const handleAutoWifi = async () => {
+        if (credentials.SSID) {
+            await AsyncStorage.setItem(
+                '@wifi_auto',
+                JSON.stringify(!autoConnectWifi),
+            )
+            setAutoConnectWifi(!autoConnectWifi)
+        } else {
+            RNToasty.Error({title: 'Settings are empty'})
+        }
+    }
+
+    const handleWifiSettings = async () => {
+        try {
+            const encryptedPassword = encryptPassword(credentials.password)
+            const data = JSON.stringify({
+                ...credentials,
+                password: encryptedPassword,
+            })
+            console.log(data)
+            await AsyncStorage.setItem('@wifi_settings', data)
+        } catch (e) {
+            console.warn(e)
+        }
+    }
+
+    const toggleWifiSettingsOverlay = () =>
+        setWifiSettingsOverlay(!wifiSettingsOverlay)
+
+    const toggleWifiPasswordOverlay = async (l = null) => {
+        if (l) setWifiConnect(l)
+        setWifiPasswordOverlay(!wifiPasswordOverlay)
+    }
+    return (
+        <SafeAreaView style={styles.root}>
+            <ScrollView
+                refreshControl={
+                    <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={onRefresh}
+                    />
+                }>
+                <Text h3 style={{textAlign: 'center'}}>
+                    Wifi
+                </Text>
+                <View style={styles.settings}>
+                    <CheckBox
+                        title="Connect automatically"
+                        checkedIcon="dot-circle-o"
+                        uncheckedIcon="circle-o"
+                        checked={autoConnectWifi}
+                        onPress={handleAutoWifi}
+                    />
+                    <Icon
+                        style={{
+                            marginTop: 'auto',
+                            marginBottom: 'auto',
+                        }}
+                        type="material-community"
+                        name="settings"
+                        onPress={toggleWifiSettingsOverlay}
+                    />
+                </View>
+                <Overlay
+                    isVisible={wifiSettingsOverlay}
+                    onBackdropPress={toggleWifiSettingsOverlay}>
+                    <View style={{width: 200}}>
+                        <CheckBox
+                            title="Secure"
+                            checkedIcon="dot-circle-o"
+                            uncheckedIcon="circle-o"
+                            checked={credentials.isWep}
+                            onPress={() =>
+                                setCredentials({
+                                    ...credentials,
+                                    isWep: !credentials.isWep,
+                                })
+                            }
+                        />
+                        <Input
+                            onChangeText={(text) =>
+                                setCredentials({
+                                    ...credentials,
+                                    SSID: text,
+                                })
+                            }
+                            placeholder="SSID"
+                        />
+                        {credentials.isWep ? (
+                            <Input
+                                onChangeText={(text) =>
+                                    setCredentials({
+                                        ...credentials,
+                                        password: text,
+                                    })
+                                }
+                                placeholder="Password"
+                                secureTextEntry={true}
+                            />
+                        ) : (
+                            <></>
+                        )}
+
+                        <Button
+                            title="Save"
+                            onPress={() => {
+                                handleWifiSettings()
+                                toggleWifiSettingsOverlay()
+                            }}
+                        />
+                    </View>
+                </Overlay>
+                {wifiList === null ? (
+                    <ActivityIndicator size="large" color="#0000ff" />
+                ) : (
+                    <>
+                        {wifiList.length === 0 ? (
+                            <Text>{`
+                  No WiFI networks found!
+                  `}</Text>
+                        ) : (
+                            <>
+                                {wifiList.map((l, i) => (
+                                    <>
+                                        <ListItem
+                                            key={i}
+                                            title={l.SSID}
+                                            subtitle={l.BSSID}
+                                            bottomDivider
+                                            style={[
+                                                styles.listItem,
+                                                wifi.name === l.SSID
+                                                    ? styles.green
+                                                    : styles.black,
+                                            ]}
+                                            onPress={() =>
+                                                wifi.name !== l.SSID
+                                                    ? l.capabilities
+                                                        ? toggleWifiPasswordOverlay(
+                                                              l,
+                                                          )
+                                                        : handleConnectWifi(l)
+                                                    : null
+                                            }
+                                        />
+                                    </>
+                                ))}
+                            </>
+                        )}
+                    </>
+                )}
+
+                <Overlay
+                    isVisible={wifiPasswordOverlay}
+                    onBackdropPress={toggleWifiPasswordOverlay}>
+                    <View style={{width: 200}}>
+                        <Input
+                            onChangeText={(text) => setWifiPassword(text)}
+                            placeholder="Password"
+                            secureTextEntry={true}
+                        />
+                        <Button
+                            title="Connect"
+                            onPress={() => {
+                                handleConnectWifi()
+                                toggleWifiPasswordOverlay()
+                            }}
+                        />
+                    </View>
+                </Overlay>
+            </ScrollView>
+        </SafeAreaView>
+    )
+}
+
+const mapStateToProps = (state) => {
+    // Redux Store --> Component
+    return {
+        settings: state.settingsReducer,
+        wifi: state.wifiReducer,
+    }
+} // Map Dispatch To Props (Dispatch Actions To Reducers. Reducers Then Modify The Data And Assign It To Your Props)
+const mapDispatchToProps = (dispatch) => {
+    // Action
+    return {
+        setWifiName: (data) => dispatch(setWifiName(data)),
+        setWifiIP: (data) => dispatch(setWifiIP(data)),
+    }
+} // Exports
+
+export default connect(mapStateToProps, mapDispatchToProps)(Wifi)

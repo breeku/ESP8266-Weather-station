@@ -1,17 +1,22 @@
-import {RNToasty} from 'react-native-toasty';
-import WifiManager from 'react-native-wifi-reborn';
+import {RNToasty} from 'react-native-toasty'
+import {updateTime} from '../time/time'
 
 export const getSensorData = async () => {
-  if ((await WifiManager.getIP()) === '0.0.0.0') {
-    RNToasty.Error({title: 'Wifi is not ready'});
-    return;
-  }
-  try {
-    const response = await fetch('http://192.168.4.1/sensors/');
-    const json = await response.json();
-    return json.sensors;
-  } catch (e) {
-    RNToasty.Error({title: 'Connection failed'});
-    console.warn(e);
-  }
-};
+    try {
+        const response = await fetch('http://192.168.4.1/sensors/')
+        const json = await response.json()
+        if (json.status && json.status.includes('Time needs to be updated')) {
+            throw 'updating'
+        }
+        return json.sensors
+    } catch (e) {
+        if (e === 'updating') {
+            const response = await updateTime()
+            RNToasty.Info({title: 'Updating time...'})
+            if (response) return await getSensorData()
+        } else {
+            RNToasty.Error({title: 'Connection failed'})
+            console.warn('getSensorData', e)
+        }
+    }
+}

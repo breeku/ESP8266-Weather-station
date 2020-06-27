@@ -5,30 +5,105 @@
 #include "Adafruit_Sensor.h"
 #include "Adafruit_AM2320.h"
 #include "LittleFS.h"
+#include <TimeLib.h>
+#include <EEPROM.h>
 
-//////////////////////
-// WiFi Definitions //
-//////////////////////
-#ifndef APSSID
-#define APSSID "ESP_ap"
-#define APPSK  "123123123"
-#endif
+const char *softAP_ssid = "ESP_ap";
+const char *softAP_password = "123123123";
 
-const char *ssid = APSSID;
-const char *password = APPSK;
-
-WiFiEventHandler gotIpEventHandler, disconnectedEventHandler;
+char ssid[32] = "";
+char password[32] = "";
 
 ESP8266WebServer server(80);
 Adafruit_AM2320 am2320 = Adafruit_AM2320();
 
-unsigned long previousMillis = 0;        // will store last time LED was updated
+unsigned long previousMillis = 0; // will store last time LED was updated
 
 long interval = 60000; // interval at which to take snapshot (milliseconds) 300000 = 5min
 
+long heapStart = ESP.getFreeHeap();
+
 FSInfo fs_info;
 
-void handleSensors() {
+/** Load WLAN credentials from EEPROM */
+void loadCredentials() {
+  EEPROM.begin(512);
+  EEPROM.get(0, ssid);
+  EEPROM.get(0 + sizeof(ssid), password);
+  char ok[2 + 1];
+  EEPROM.get(0 + sizeof(ssid) + sizeof(password), ok);
+  EEPROM.end();
+  if (String(ok) != String("OK")) {
+    ssid[0] = 0;
+    password[0] = 0;
+  }
+  Serial.println("Recovered credentials:");
+  Serial.println(ssid);
+  Serial.println(strlen(password) > 0 ? "********" : "<no password>");
+}
+
+/** Store WLAN credentials to EEPROM */
+void saveCredentials() {
+  EEPROM.begin(512);
+  EEPROM.put(0, ssid);
+  EEPROM.put(0 + sizeof(ssid), password);
+  char ok[2 + 1] = "OK";
+  EEPROM.put(0 + sizeof(ssid) + sizeof(password), ok);
+  EEPROM.commit();
+  EEPROM.end();
+}
+
+void handleAccessPointPOST() {
+  if (server.hasArg("ssid") && server.hasArg("password")) {
+    Serial.println("wifi save");
+    server.arg("ssid").toCharArray(ssid, sizeof(ssid) - 1);
+    server.arg("password").toCharArray(password, sizeof(password) - 1);
+    saveCredentials();
+    if (strlen(ssid) > 0 && strlen(password) > 0) {
+      WiFi.softAPdisconnect(true);
+      WiFi.softAP(ssid, password);
+    }
+  }
+}
+
+void handleSystemInfoGET() {
+  long fh = ESP.getFreeHeap();
+  LittleFS.info(fs_info);
+  String result = "{\"memory\": ";
+  result +=  "{\"free\": ";
+  result += fh;
+  result += ", \"start\": ";
+  result += heapStart;
+  result += "},";
+  result += "\"filesystem\": ";
+  result +=  "{\"used\": ";
+  result += fs_info.usedBytes;
+  result += ", \"total\": ";
+  result += fs_info.totalBytes;
+  result += "}";
+  result += "}";
+  server.send(200, "application/json", result);
+}
+
+void handleTimeUpdateGET() {
+  if (server.hasArg("val")) {
+    long arg = server.arg("val").toInt();
+    Serial.println(arg);
+
+    setTime(arg);
+
+    Serial.print("Time updated!");
+    server.send(200, "application/json", "{\"STATUS\": \"OK\"}");
+  } else {
+    server.send(500, "application/json", "{\"status\": \"No args found\"}");
+  }
+}
+
+void handleSensorsGET() {
+  if (timeStatus() == timeNotSet) {
+    server.send(500, "application/json", "{\"status\": \"Time needs to be updated\"}");
+  }
+
   String result;
   Serial.println("Reading from file");
   File file = LittleFS.open("/sensors.txt", "r");
@@ -44,18 +119,16 @@ void handleSensors() {
 }
 
 void handleFrequencyPOST() {
-  String result;
   if (server.hasArg("val")) {
     String arg = server.arg("val");
 
     interval = arg.toInt();
 
-    result += "{\"STATUS\": \"OK\"}";
     Serial.print("Interval updated! New interval: ");
     Serial.print(interval);
     Serial.print("ms");
     Serial.println("");
-    server.send(200, "application/json", result);
+    server.send(200, "application/json", "{\"STATUS\": \"OK\"}");
   } else {
     server.send(500, "application/json", "{\"status\": \"No args found\"}");
   }
@@ -100,6 +173,8 @@ void setup()
     Serial.println("File write failed");
   }
 
+  fileToWrite.close();
+
   LittleFS.info(fs_info);
   printf("LittleFS: %lu of %lu bytes used.\n",
          fs_info.usedBytes, fs_info.totalBytes);
@@ -124,7 +199,7 @@ String dataToJSON (long timestamp = 0) {
 
   doc["temperature"] = temperature;
   doc["humidity"] = humidity;
-  doc["timestamp"] = timestamp;
+  doc["timestamp"] = now();
 
   serializeJson(doc, Serial);
 
@@ -134,6 +209,7 @@ String dataToJSON (long timestamp = 0) {
 }
 
 void saveSensorData() {
+
   File file = LittleFS.open("/sensors.txt", "a");
   if (!file) {
     Serial.println("Error opening file for writing");
@@ -162,13 +238,13 @@ void saveSensorData() {
   file.close();
 }
 
-
-
 void setupWiFi()
 {
   Serial.print("Configuring access point...");
 
-  WiFi.softAP(ssid, password);
+  loadCredentials();
+
+  WiFi.softAP(strlen(ssid) > 0 ? ssid : softAP_ssid, strlen(password) > 0 ? password : softAP_password);
 
   IPAddress myIP = WiFi.softAPIP();
   Serial.print("AP IP address: ");
@@ -179,9 +255,12 @@ void setupWiFi()
   server.on("/", []() {
     server.send(200, "text/plain", "This is an index page.");
   });
-  server.on("/sensors/", HTTP_GET, handleSensors);
+  server.on("/sensors/", HTTP_GET, handleSensorsGET);
   server.on("/frequency/", HTTP_GET, handleFrequencyGET);
   server.on("/frequency/", HTTP_POST, handleFrequencyPOST);
+  server.on("/time/", HTTP_POST, handleTimeUpdateGET);
+  server.on("/systeminfo/", HTTP_GET, handleSystemInfoGET);
+  server.on("/accesspoint/", HTTP_POST, handleAccessPointPOST);
 
   // END-ROUTES
 
@@ -194,7 +273,7 @@ void loop()
   server.handleClient();
   unsigned long currentMillis = millis();
 
-  if (currentMillis - previousMillis >= interval) {
+  if (timeStatus() != timeNotSet && currentMillis - previousMillis >= interval) {
     previousMillis = currentMillis;
     saveSensorData();
   }

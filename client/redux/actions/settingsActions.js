@@ -1,4 +1,4 @@
-export const setSettings = data => ({
-  type: 'SET_SETTINGS',
-  data,
-});
+export const setSettings = (data) => ({
+    type: 'SET_SETTINGS',
+    data,
+})
