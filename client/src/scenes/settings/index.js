@@ -1,22 +1,37 @@
 import React from 'react'
 
-import {createStackNavigator} from '@react-navigation/stack'
+import {View} from 'react-native'
 
-import Navigation from '_navigations/settings'
-import Interval from '_components/interval'
-import AccessPoint from '_components/accessPoint'
-import Wifi from '_components/wifi'
+import {ListItem} from 'react-native-elements'
 
-const Stack = createStackNavigator()
-
-const Settings = () => {
+const Settings = ({navigation}) => {
     return (
-        <Stack.Navigator headerMode="screen">
-            <Stack.Screen name="Settings" component={Navigation} />
-            <Stack.Screen name="Access Point" component={AccessPoint} />
-            <Stack.Screen name="Interval" component={Interval} />
-            <Stack.Screen name="Wifi" component={Wifi} />
-        </Stack.Navigator>
+        <View>
+            <ListItem
+                title="Access point"
+                leftIcon={{
+                    name: 'access-point',
+                    type: 'material-community',
+                }}
+                bottomDivider
+                chevron
+                onPress={() => navigation.navigate('Access Point')}
+            />
+            <ListItem
+                title="Interval"
+                leftIcon={{name: 'timer', type: 'material-community'}}
+                bottomDivider
+                chevron
+                onPress={() => navigation.navigate('Interval')}
+            />
+            <ListItem
+                title="Wifi"
+                leftIcon={{name: 'wifi', type: 'material-community'}}
+                bottomDivider
+                chevron
+                onPress={() => navigation.navigate('Wifi')}
+            />
+        </View>
     )
 }
 
