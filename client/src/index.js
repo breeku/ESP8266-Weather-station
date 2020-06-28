@@ -7,7 +7,7 @@
  */
 
 import 'react-native-gesture-handler'
-import React, {useState, useEffect} from 'react'
+import React, {useEffect} from 'react'
 
 import {PermissionsAndroid, AppState} from 'react-native'
 
@@ -21,14 +21,14 @@ import {Icon} from 'react-native-elements'
 import WifiManager from 'react-native-wifi-reborn'
 import AsyncStorage from '@react-native-community/async-storage'
 
-import {setSettings} from './redux/actions/settingsActions'
-import {setWifi} from './redux/actions/wifiReducer'
+import {setSettings} from '_redux/actions/settingsActions'
+import {setWifi} from '_redux/actions/wifiReducer'
 
-import Home from './components/Screens/Home'
-import Sensors from './components/Screens/Sensors'
-import Settings from './components/Screens/Settings'
+import Home from '_scenes/home'
+import Sensors from '_scenes/sensors'
+import Settings from '_scenes/settings'
 
-import {connectToWifi, getWifiName} from './utils/wifi/wifi'
+import {connectToWifi, getWifiName} from '_utils/wifi/'
 
 const Tab = createBottomTabNavigator()
 
@@ -58,10 +58,10 @@ const requestFineLocation = async () => {
     }
 }
 
-const App: () => React$Node = (props) => {
+const App: () => React$Node = props => {
     const {setWifi, setSettings} = props
 
-    const _handleAppStateChange = async (nextAppState) => {
+    const _handleAppStateChange = async nextAppState => {
         if (nextAppState === 'active') {
             console.log('enabling wifi')
             WifiManager.setEnabled(true)
@@ -179,20 +179,23 @@ const App: () => React$Node = (props) => {
     )
 }
 
-const mapStateToProps = (state) => {
+const mapStateToProps = state => {
     // Redux Store --> Component
     return {
         settings: state.settingsReducer,
         wifi: state.wifiReducer,
     }
 } // Map Dispatch To Props (Dispatch Actions To Reducers. Reducers Then Modify The Data And Assign It To Your Props)
-const mapDispatchToProps = (dispatch) => {
+const mapDispatchToProps = dispatch => {
     // Action
     return {
         // Set settings
-        setSettings: (data) => dispatch(setSettings(data)),
-        setWifi: (data) => dispatch(setWifi(data)),
+        setSettings: data => dispatch(setSettings(data)),
+        setWifi: data => dispatch(setWifi(data)),
     }
 } // Exports
 
-export default connect(mapStateToProps, mapDispatchToProps)(App)
+export default connect(
+    mapStateToProps,
+    mapDispatchToProps,
+)(App)

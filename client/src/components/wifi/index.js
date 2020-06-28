@@ -26,12 +26,12 @@ import AsyncStorage from '@react-native-community/async-storage'
 
 import {RNToasty} from 'react-native-toasty'
 
-import {setWifiName} from '../../../redux/actions/wifiReducer'
-import {setWifiIP} from '../../../redux/actions/wifiReducer'
+import {setWifiName} from '_redux/actions/wifiReducer'
+import {setWifiIP} from '_redux/actions/wifiReducer'
 
-import {connectToWifi} from '../../../utils/wifi/wifi'
+import {connectToWifi} from '_utils/wifi'
 
-import {encryptPassword} from '../../../utils/encrypt/password'
+import {encryptPassword} from '_utils/encrypt'
 
 const styles = StyleSheet.create({
     root: {
@@ -65,7 +65,7 @@ const styles = StyleSheet.create({
     },
 })
 
-const Wifi = (props) => {
+const Wifi = props => {
     const {setWifi, settings, wifi} = props
 
     const [wifiList, setWifiList] = useState(null)
@@ -101,7 +101,7 @@ const Wifi = (props) => {
         getData()
     }, [])
 
-    const handleConnectWifi = async (d) => {
+    const handleConnectWifi = async d => {
         const data = d || wifiConnect
         const obj = {
             SSID: data.SSID,
@@ -198,7 +198,7 @@ const Wifi = (props) => {
                             }
                         />
                         <Input
-                            onChangeText={(text) =>
+                            onChangeText={text =>
                                 setCredentials({
                                     ...credentials,
                                     SSID: text,
@@ -208,7 +208,7 @@ const Wifi = (props) => {
                         />
                         {credentials.isWep ? (
                             <Input
-                                onChangeText={(text) =>
+                                onChangeText={text =>
                                     setCredentials({
                                         ...credentials,
                                         password: text,
@@ -275,7 +275,7 @@ const Wifi = (props) => {
                     onBackdropPress={toggleWifiPasswordOverlay}>
                     <View style={{width: 200}}>
                         <Input
-                            onChangeText={(text) => setWifiPassword(text)}
+                            onChangeText={text => setWifiPassword(text)}
                             placeholder="Password"
                             secureTextEntry={true}
                         />
@@ -293,19 +293,22 @@ const Wifi = (props) => {
     )
 }
 
-const mapStateToProps = (state) => {
+const mapStateToProps = state => {
     // Redux Store --> Component
     return {
         settings: state.settingsReducer,
         wifi: state.wifiReducer,
     }
 } // Map Dispatch To Props (Dispatch Actions To Reducers. Reducers Then Modify The Data And Assign It To Your Props)
-const mapDispatchToProps = (dispatch) => {
+const mapDispatchToProps = dispatch => {
     // Action
     return {
-        setWifiName: (data) => dispatch(setWifiName(data)),
-        setWifiIP: (data) => dispatch(setWifiIP(data)),
+        setWifiName: data => dispatch(setWifiName(data)),
+        setWifiIP: data => dispatch(setWifiIP(data)),
     }
 } // Exports
 
-export default connect(mapStateToProps, mapDispatchToProps)(Wifi)
+export default connect(
+    mapStateToProps,
+    mapDispatchToProps,
+)(Wifi)

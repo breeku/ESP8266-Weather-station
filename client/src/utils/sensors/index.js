@@ -1,5 +1,5 @@
 import {RNToasty} from 'react-native-toasty'
-import {updateTime} from '../time/time'
+import {updateTime} from '_utils/time'
 
 export const getSensorData = async () => {
     try {

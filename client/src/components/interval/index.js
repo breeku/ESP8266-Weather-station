@@ -10,8 +10,8 @@ import {Text, Input, Button, Slider} from 'react-native-elements'
 
 import {connect} from 'react-redux'
 
-import {postInterval} from '../../../utils/interval/interval'
-import {getInterval} from '../../../utils/interval/interval'
+import {postInterval} from '_utils/interval'
+import {getInterval} from '_utils/interval'
 
 const styles = StyleSheet.create({
     intervalInput: {
@@ -19,7 +19,7 @@ const styles = StyleSheet.create({
     },
 })
 
-const Interval = (props) => {
+const Interval = props => {
     const {wifi} = props
     const [interval, setInterval] = useState(0)
     const [updatingInterval, setUpdatingInterval] = useState(false)
@@ -65,7 +65,7 @@ const Interval = (props) => {
                 </Text>
                 <Slider
                     value={interval}
-                    onValueChange={(value) => setInterval(value)}
+                    onValueChange={value => setInterval(value)}
                     step={0.5}
                     minimumValue={1}
                     maximumValue={1440}
@@ -74,7 +74,7 @@ const Interval = (props) => {
                 <Input
                     style={styles.intervalInput}
                     keyboardType={'numeric'}
-                    onChangeText={(val) =>
+                    onChangeText={val =>
                         val > 0 && val < 1440 ? setInterval(parseInt(val)) : 1
                     }>
                     {interval}
@@ -96,15 +96,18 @@ const Interval = (props) => {
     )
 }
 
-const mapStateToProps = (state) => {
+const mapStateToProps = state => {
     // Redux Store --> Component
     return {
         wifi: state.wifiReducer,
     }
 } // Map Dispatch To Props (Dispatch Actions To Reducers. Reducers Then Modify The Data And Assign It To Your Props)
-const mapDispatchToProps = (dispatch) => {
+const mapDispatchToProps = dispatch => {
     // Action
     return {}
 } // Exports
 
-export default connect(mapStateToProps, mapDispatchToProps)(Interval)
+export default connect(
+    mapStateToProps,
+    mapDispatchToProps,
+)(Interval)

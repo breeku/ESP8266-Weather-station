@@ -17,12 +17,12 @@ import {LineChart} from 'react-native-chart-kit'
 
 import AsyncStorage from '@react-native-community/async-storage'
 
-import {getSensorData} from '../../utils/sensors/sensors'
-import {updateTime, TIMEZONE_OFFSET} from '../../utils/time/time'
+import {getSensorData} from '_utils/sensors'
+import {updateTime, TIMEZONE_OFFSET} from '_utils/time'
 
-import {setWifi} from '../../redux/actions/wifiReducer'
+import {setWifi} from '_redux/actions/wifiReducer'
 
-import {getWifiName} from '../../utils/wifi/wifi'
+import {getWifiName} from '_utils/wifi'
 
 import WifiManager from 'react-native-wifi-reborn'
 
@@ -39,7 +39,7 @@ const styles = StyleSheet.create({
     },
 })
 
-const Sensors = (props) => {
+const Sensors = props => {
     const {settings, wifi} = props
     const [sensors, setSensors] = useState(null)
     const [refreshing, setRefreshing] = useState(false)
@@ -68,14 +68,12 @@ const Sensors = (props) => {
             return !label
                 ? true
                 : data.timestamp % 86400 === 0 ||
-                      sensors.findIndex(
-                          (x) => x.timestamp === data.timestamp,
-                      ) ===
+                      sensors.findIndex(x => x.timestamp === data.timestamp) ===
                           sensors.length - 1
         }
     }
 
-    const dateFormat = (data) => {
+    const dateFormat = data => {
         const date = new Date(data.timestamp * 1000)
         if (btnIndex === 0) {
             return (
@@ -129,7 +127,7 @@ const Sensors = (props) => {
                 <View style={styles.sensors}>
                     <Text h1>Sensors</Text>
                     <ButtonGroup
-                        onPress={(i) => setBtnIndex(i)}
+                        onPress={i => setBtnIndex(i)}
                         selectedIndex={btnIndex}
                         buttons={buttons}
                     />
@@ -144,15 +142,13 @@ const Sensors = (props) => {
                                 <LineChart
                                     data={{
                                         labels: sensors
-                                            .filter((x) => timeFilter(x, true))
-                                            .map((x) => dateFormat(x)),
+                                            .filter(x => timeFilter(x, true))
+                                            .map(x => dateFormat(x)),
                                         datasets: [
                                             {
                                                 data: sensors
-                                                    .filter((x) =>
-                                                        timeFilter(x),
-                                                    )
-                                                    .map((x) => x.temperature),
+                                                    .filter(x => timeFilter(x))
+                                                    .map(x => x.temperature),
                                             },
                                         ],
                                     }}
@@ -188,15 +184,13 @@ const Sensors = (props) => {
                                 <LineChart
                                     data={{
                                         labels: sensors
-                                            .filter((x) => timeFilter(x, true))
-                                            .map((x) => dateFormat(x)),
+                                            .filter(x => timeFilter(x, true))
+                                            .map(x => dateFormat(x)),
                                         datasets: [
                                             {
                                                 data: sensors
-                                                    .filter((x) =>
-                                                        timeFilter(x),
-                                                    )
-                                                    .map((x) => x.humidity),
+                                                    .filter(x => timeFilter(x))
+                                                    .map(x => x.humidity),
                                             },
                                         ],
                                     }}
@@ -239,18 +233,21 @@ const Sensors = (props) => {
     )
 }
 
-const mapStateToProps = (state) => {
+const mapStateToProps = state => {
     // Redux Store --> Component
     return {
         wifi: state.wifiReducer,
         settings: state.settingsReducer,
     }
 } // Map Dispatch To Props (Dispatch Actions To Reducers. Reducers Then Modify The Data And Assign It To Your Props)
-const mapDispatchToProps = (dispatch) => {
+const mapDispatchToProps = dispatch => {
     // Action
     return {
-        setWifi: (data) => dispatch(setWifi(data)),
+        setWifi: data => dispatch(setWifi(data)),
     }
 } // Exports
 
-export default connect(mapStateToProps, mapDispatchToProps)(Sensors)
+export default connect(
+    mapStateToProps,
+    mapDispatchToProps,
+)(Sensors)

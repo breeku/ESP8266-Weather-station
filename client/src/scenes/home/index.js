@@ -15,7 +15,7 @@ import {ProgressChart} from 'react-native-chart-kit'
 
 import {connect} from 'react-redux'
 
-import {getSystemInfo} from '../../utils/system/system'
+import {getSystemInfo} from '_utils/system'
 
 const styles = StyleSheet.create({
     root: {
@@ -25,7 +25,7 @@ const styles = StyleSheet.create({
     },
 })
 
-const Home = (props) => {
+const Home = props => {
     const {wifi} = props
     const [memory, setMemory] = useState(null)
     const [filesystem, setFileSystem] = useState(null)
@@ -167,15 +167,18 @@ const Home = (props) => {
     )
 }
 
-const mapStateToProps = (state) => {
+const mapStateToProps = state => {
     // Redux Store --> Component
     return {
         wifi: state.wifiReducer,
     }
 } // Map Dispatch To Props (Dispatch Actions To Reducers. Reducers Then Modify The Data And Assign It To Your Props)
-const mapDispatchToProps = (dispatch) => {
+const mapDispatchToProps = dispatch => {
     // Action
     return {}
 } // Exports
 
-export default connect(mapStateToProps, mapDispatchToProps)(Home)
+export default connect(
+    mapStateToProps,
+    mapDispatchToProps,
+)(Home)

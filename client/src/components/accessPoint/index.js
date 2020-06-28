@@ -8,7 +8,7 @@ import {RNToasty} from 'react-native-toasty'
 
 import WifiManager from 'react-native-wifi-reborn'
 
-import {postAccessPoint} from '../../../utils/system/system'
+import {postAccessPoint} from '_utils/system'
 
 const styles = StyleSheet.create({
     accessPointInput: {
@@ -62,7 +62,7 @@ const AccessPoint = () => {
             <Input
                 placeholder="SSID"
                 style={styles.accessPointInput}
-                onChangeText={(text) =>
+                onChangeText={text =>
                     setAccessPoint({
                         ...accessPoint,
                         ssid: text,
@@ -72,7 +72,7 @@ const AccessPoint = () => {
             <Input
                 placeholder="password"
                 style={styles.accessPointInput}
-                onChangeText={(text) =>
+                onChangeText={text =>
                     setAccessPoint({
                         ...accessPoint,
                         password: text,

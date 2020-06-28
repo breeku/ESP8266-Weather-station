@@ -1,13 +1,13 @@
 import {RNToasty} from 'react-native-toasty'
 import WifiManager from 'react-native-wifi-reborn'
-import {decryptPassword} from '../encrypt/password'
+import {decryptPassword} from '_utils/encrypt'
 
 async function delay(ms) {
     // return await for better async stack trace support in case of errors.
-    return await new Promise((resolve) => setTimeout(resolve, ms))
+    return await new Promise(resolve => setTimeout(resolve, ms))
 }
 
-export const connectToWifi = async (credentials) => {
+export const connectToWifi = async credentials => {
     try {
         credentials.password = decryptPassword(credentials.password)
         RNToasty.Info({title: 'Attempting to connect...', duration: 1})
