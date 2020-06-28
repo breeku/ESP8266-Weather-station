@@ -53,7 +53,7 @@ const Sensors = props => {
 
             setRefreshing(false)
         }
-    }, [refreshing])
+    }, [wifi, refreshing])
 
     const timeFilter = (data, label) => {
         if (btnIndex === 0) {
@@ -89,6 +89,7 @@ const Sensors = props => {
     }
 
     useEffect(() => {
+        console.log('sensors')
         if (settings.permissions) {
             const getData = async () => {
                 let sensorsTime =
@@ -104,6 +105,7 @@ const Sensors = props => {
                     )
                 }
                 if (sensorsTime) {
+                    console.log('get sensors')
                     setSensors(await getSensorData())
                 }
             }
@@ -243,4 +245,7 @@ const mapDispatchToProps = dispatch => {
     }
 } // Exports
 
-export default connect(mapStateToProps, mapDispatchToProps)(Sensors)
+export default connect(
+    mapStateToProps,
+    mapDispatchToProps,
+)(Sensors)

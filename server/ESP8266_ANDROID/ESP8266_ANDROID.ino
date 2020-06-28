@@ -23,6 +23,10 @@ long interval = 60000; // interval at which to take snapshot (milliseconds) 3000
 
 long heapStart = ESP.getFreeHeap();
 
+long minHeapThreshold = 10000;
+
+bool fileFull = false;
+
 FSInfo fs_info;
 
 /** Load WLAN credentials from EEPROM */
@@ -104,18 +108,75 @@ void handleSensorsGET() {
     server.send(500, "application/json", "{\"status\": \"Time needs to be updated\"}");
   }
 
-  String result;
-  Serial.println("Reading from file");
-  File file = LittleFS.open("/sensors.txt", "r");
+  if (server.hasArg("offset")) {
+    String result;
+    long bytesRead = 0;
+    int readings = 0;
+    long freeHeap;
+    char character[2];
+    bool maxReached = false;
+    int offset = server.arg("offset").toInt();
 
-  while (file.available()) {
-    result += (char)file.read();
+    freeHeap = ESP.getFreeHeap();
+    Serial.println(freeHeap);
+
+    Serial.println("Reading from file");
+    File file = LittleFS.open("/sensors.txt", "r");
+
+    result += "{\"sensors\": [";
+
+    // there is a ~44000b heap
+    // file can be up to ~300000b
+    // so we need a offset
+    // we read from offset byte till our heap is at minHeapThreshold
+    // after which we add "next" to result object
+    // so client knows to set offset = next ( + 1 ? )
+
+    file.seek(offset, SeekSet);
+
+    while (file.available()) {
+      freeHeap = ESP.getFreeHeap();
+      character[0] = file.read();
+      character[1] = '\0';
+
+      result += character;
+
+      bytesRead++;
+      if (strcmp(character, "}") == 0) {
+        readings++;
+        if (freeHeap < minHeapThreshold) {
+          maxReached = true;
+          break;
+        }
+      }
+    }
+
+    file.close();
+
+    result += "]";
+
+    if (maxReached) {
+      result += ", \"next\": ";
+      result += bytesRead;
+    }
+    if (fileFull) {
+      result += ", \"full\": ";
+      result += true;
+    }
+
+    result += ", \"total\": ";
+    result += readings;
+
+    result += "}";
+
+    freeHeap = ESP.getFreeHeap();
+    Serial.println(freeHeap);
+    Serial.println("Got ");
+    Serial.println(readings);
+
+    server.send(200, "application/json", result);
   }
 
-  file.close();
-
-  result += "]}";
-  server.send(200, "application/json", result);
 }
 
 void handleFrequencyPOST() {
@@ -160,20 +221,12 @@ void setup()
     Serial.println("Error mounting the file system");
   }
 
-  File fileToWrite = LittleFS.open("/sensors.txt", "w");
-
-  if (!fileToWrite) {
-    Serial.println("There was an error opening the file for writing");
-    return;
-  }
-
-  if (fileToWrite.print("{\"sensors\": [")) {
-    Serial.println("File was written");
-  } else {
-    Serial.println("File write failed");
-  }
-
-  fileToWrite.close();
+  /*
+    File file = LittleFS.open("/sensors.txt", "w");
+    if (file) {
+    file.print("");
+    }
+  */
 
   LittleFS.info(fs_info);
   printf("LittleFS: %lu of %lu bytes used.\n",
@@ -209,6 +262,14 @@ String dataToJSON (long timestamp = 0) {
 }
 
 void saveSensorData() {
+  LittleFS.info(fs_info);
+  printf("LittleFS: %lu of %lu bytes used.\n",
+         fs_info.usedBytes, fs_info.totalBytes);
+
+  if (fs_info.totalBytes - fs_info.usedBytes < 1000) {
+    fileFull = true;
+    return;
+  }
 
   File file = LittleFS.open("/sensors.txt", "a");
   if (!file) {
@@ -218,7 +279,7 @@ void saveSensorData() {
 
   String data = dataToJSON(previousMillis);
 
-  if (file.size() > 50) {
+  if (file.size() > 1) {
     data = ',' + data;
   }
 
@@ -228,10 +289,6 @@ void saveSensorData() {
     Serial.print(bytesWritten);
     Serial.print(" bytes were written.");
     Serial.println("");
-
-    LittleFS.info(fs_info);
-    printf("LittleFS: %lu of %lu bytes used.\n",
-           fs_info.usedBytes, fs_info.totalBytes);
   } else {
     Serial.println("File write failed");
   }
@@ -275,6 +332,6 @@ void loop()
 
   if (timeStatus() != timeNotSet && currentMillis - previousMillis >= interval) {
     previousMillis = currentMillis;
-    saveSensorData();
+    if (!fileFull) saveSensorData();
   }
 }

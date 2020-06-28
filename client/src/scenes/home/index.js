@@ -45,9 +45,10 @@ const Home = props => {
         }
 
         setRefreshing(false)
-    }, [refreshing])
+    }, [wifi, refreshing])
 
     useEffect(() => {
+        console.log('home')
         const getData = async () => {
             try {
                 const data = await getSystemInfo()
@@ -180,4 +181,7 @@ const mapDispatchToProps = dispatch => {
     return {}
 } // Exports
 
-export default connect(mapStateToProps, mapDispatchToProps)(Home)
+export default connect(
+    mapStateToProps,
+    mapDispatchToProps,
+)(Home)

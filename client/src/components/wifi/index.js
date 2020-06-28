@@ -87,9 +87,10 @@ const Wifi = props => {
         setWifiList(JSON.parse(getWifiList))
 
         setRefreshing(false)
-    }, [refreshing])
+    }, [wifi, refreshing])
 
     useEffect(() => {
+        console.log('wifieffect')
         const getData = async () => {
             try {
                 const getWifiList = JSON.parse(await WifiManager.loadWifiList())
@@ -308,4 +309,7 @@ const mapDispatchToProps = dispatch => {
     }
 } // Exports
 
-export default connect(mapStateToProps, mapDispatchToProps)(Wifi)
+export default connect(
+    mapStateToProps,
+    mapDispatchToProps,
+)(Wifi)

@@ -5,9 +5,9 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 
 import { Icon } from 'react-native-elements'
 
-import Home from '_scenes/home'
-import Sensors from '_scenes/sensors'
-import Settings from '_navigations/settings'
+import Home from '_scenes/Home'
+import Sensors from '_scenes/Sensors'
+import Settings from '_navigations/Settings'
 
 const Tab = createBottomTabNavigator()
 

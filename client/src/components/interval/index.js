@@ -32,7 +32,7 @@ const Interval = props => {
             setInterval((await getInterval()) / 60000)
 
         setRefreshing(false)
-    }, [refreshing])
+    }, [wifi, refreshing])
 
     useEffect(() => {
         const getData = async () => {
@@ -107,4 +107,7 @@ const mapDispatchToProps = dispatch => {
     return {}
 } // Exports
 
-export default connect(mapStateToProps, mapDispatchToProps)(Interval)
+export default connect(
+    mapStateToProps,
+    mapDispatchToProps,
+)(Interval)

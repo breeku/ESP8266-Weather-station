@@ -2,10 +2,10 @@ import React from 'react'
 
 import { createStackNavigator } from '@react-navigation/stack'
 
-import Settings from '_scenes/settings'
-import Interval from '_components/interval'
-import AccessPoint from '_components/accessPoint'
-import Wifi from '_components/wifi'
+import Settings from '_scenes/Settings'
+import Interval from '_components/Interval'
+import AccessPoint from '_components/AccessPoint'
+import Wifi from '_components/Wifi'
 
 const Stack = createStackNavigator()
 
