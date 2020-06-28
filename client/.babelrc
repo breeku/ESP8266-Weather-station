@@ -9,8 +9,8 @@
                 "alias": {
                     "_assets": "./src/assets",
                     "_components": "./src/components",
-                    "_redux": "./src/redux",
                     "_navigations": "./src/navigations",
+                    "_redux": "./src/redux",
                     "_scenes": "./src/scenes",
                     "_services": "./src/services",
                     "_styles": "./src/styles",

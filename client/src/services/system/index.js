@@ -1,4 +1,4 @@
-import {RNToasty} from 'react-native-toasty'
+import { RNToasty } from 'react-native-toasty'
 
 export const getSystemInfo = async () => {
     try {
@@ -6,12 +6,12 @@ export const getSystemInfo = async () => {
         const json = await response.json()
         return json
     } catch (e) {
-        RNToasty.Error({title: 'Connection failed'})
+        RNToasty.Error({ title: 'Connection failed' })
         console.warn('getSystemInfo', e)
     }
 }
 
-export const postAccessPoint = async (credentials) => {
+export const postAccessPoint = async credentials => {
     try {
         await fetch(
             'http://192.168.4.1/accesspoint/?ssid=' +
@@ -23,7 +23,7 @@ export const postAccessPoint = async (credentials) => {
             },
         )
     } catch (e) {
-        RNToasty.Info({title: 'Resetting access point...'})
+        RNToasty.Info({ title: 'Resetting access point...' })
         return true
     }
 }

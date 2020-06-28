@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useCallback} from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 
 import {
     StyleSheet,
@@ -6,12 +6,12 @@ import {
     ScrollView,
     RefreshControl,
 } from 'react-native'
-import {Text, Input, Button, Slider} from 'react-native-elements'
+import { Text, Input, Button, Slider } from 'react-native-elements'
 
-import {connect} from 'react-redux'
+import { connect } from 'react-redux'
 
-import {postInterval} from '_utils/interval'
-import {getInterval} from '_utils/interval'
+import { postInterval } from '_services/interval'
+import { getInterval } from '_services/interval'
 
 const styles = StyleSheet.create({
     intervalInput: {
@@ -20,7 +20,7 @@ const styles = StyleSheet.create({
 })
 
 const Interval = props => {
-    const {wifi} = props
+    const { wifi } = props
     const [interval, setInterval] = useState(0)
     const [updatingInterval, setUpdatingInterval] = useState(false)
     const [refreshing, setRefreshing] = useState(false)
@@ -60,7 +60,7 @@ const Interval = props => {
                         onRefresh={onRefresh}
                     />
                 }>
-                <Text h3 style={{textAlign: 'center'}}>
+                <Text h3 style={{ textAlign: 'center' }}>
                     Interval
                 </Text>
                 <Slider
@@ -107,7 +107,4 @@ const mapDispatchToProps = dispatch => {
     return {}
 } // Exports
 
-export default connect(
-    mapStateToProps,
-    mapDispatchToProps,
-)(Interval)
+export default connect(mapStateToProps, mapDispatchToProps)(Interval)

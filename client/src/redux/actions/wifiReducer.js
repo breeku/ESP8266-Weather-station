@@ -1,4 +1,4 @@
-export const setWifi = (data) => ({
+export const setWifi = data => ({
     type: 'SET_WIFI',
     data,
 })

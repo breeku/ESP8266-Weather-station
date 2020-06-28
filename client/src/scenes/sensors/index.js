@@ -1,4 +1,4 @@
-import React, {useEffect, useState, useCallback} from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 
 import {
     Dimensions,
@@ -9,22 +9,18 @@ import {
     RefreshControl,
     ActivityIndicator,
 } from 'react-native'
-import {Text, Button, ButtonGroup} from 'react-native-elements'
+import { Text, ButtonGroup } from 'react-native-elements'
 
-import {connect} from 'react-redux'
+import { connect } from 'react-redux'
 
-import {LineChart} from 'react-native-chart-kit'
+import { LineChart } from 'react-native-chart-kit'
 
 import AsyncStorage from '@react-native-community/async-storage'
 
-import {getSensorData} from '_utils/sensors'
-import {updateTime, TIMEZONE_OFFSET} from '_utils/time'
+import { getSensorData } from '_services/sensors'
+import { updateTime } from '_services/time'
 
-import {setWifi} from '_redux/actions/wifiReducer'
-
-import {getWifiName} from '_utils/wifi'
-
-import WifiManager from 'react-native-wifi-reborn'
+import { setWifi } from '_redux/actions/wifiReducer'
 
 const styles = StyleSheet.create({
     root: {
@@ -40,7 +36,7 @@ const styles = StyleSheet.create({
 })
 
 const Sensors = props => {
-    const {settings, wifi} = props
+    const { settings, wifi } = props
     const [sensors, setSensors] = useState(null)
     const [refreshing, setRefreshing] = useState(false)
     const [btnIndex, setBtnIndex] = useState(0)
@@ -247,7 +243,4 @@ const mapDispatchToProps = dispatch => {
     }
 } // Exports
 
-export default connect(
-    mapStateToProps,
-    mapDispatchToProps,
-)(Sensors)
+export default connect(mapStateToProps, mapDispatchToProps)(Sensors)

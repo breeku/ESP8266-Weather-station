@@ -1,4 +1,4 @@
-import React, {useEffect, useState, useCallback} from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 
 import {
     StyleSheet,
@@ -9,13 +9,13 @@ import {
     RefreshControl,
     ActivityIndicator,
 } from 'react-native'
-import {Text} from 'react-native-elements'
+import { Text } from 'react-native-elements'
 
-import {ProgressChart} from 'react-native-chart-kit'
+import { ProgressChart } from 'react-native-chart-kit'
 
-import {connect} from 'react-redux'
+import { connect } from 'react-redux'
 
-import {getSystemInfo} from '_utils/system'
+import { getSystemInfo } from '_services/system'
 
 const styles = StyleSheet.create({
     root: {
@@ -26,7 +26,7 @@ const styles = StyleSheet.create({
 })
 
 const Home = props => {
-    const {wifi} = props
+    const { wifi } = props
     const [memory, setMemory] = useState(null)
     const [filesystem, setFileSystem] = useState(null)
     const [refreshing, setRefreshing] = useState(false)
@@ -74,7 +74,9 @@ const Home = props => {
                     <Text h1>Home</Text>
                     {wifi.name && wifi.name.includes('ESP') ? (
                         <>
-                            <Text style={{color: 'green'}}>ESP Detected!</Text>
+                            <Text style={{ color: 'green' }}>
+                                ESP Detected!
+                            </Text>
                             {memory && filesystem ? (
                                 <>
                                     <Text>Memory</Text>
@@ -157,7 +159,7 @@ const Home = props => {
                             )}
                         </>
                     ) : (
-                        <Text style={{color: 'red'}}>
+                        <Text style={{ color: 'red' }}>
                             Go to settings and connect to ESP
                         </Text>
                     )}
@@ -178,7 +180,4 @@ const mapDispatchToProps = dispatch => {
     return {}
 } // Exports
 
-export default connect(
-    mapStateToProps,
-    mapDispatchToProps,
-)(Home)
+export default connect(mapStateToProps, mapDispatchToProps)(Home)

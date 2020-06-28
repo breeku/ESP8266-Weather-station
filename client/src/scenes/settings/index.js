@@ -1,10 +1,10 @@
 import React from 'react'
 
-import {View} from 'react-native'
+import { View } from 'react-native'
 
-import {ListItem} from 'react-native-elements'
+import { ListItem } from 'react-native-elements'
 
-const Settings = ({navigation}) => {
+const Settings = ({ navigation }) => {
     return (
         <View>
             <ListItem
@@ -19,14 +19,14 @@ const Settings = ({navigation}) => {
             />
             <ListItem
                 title="Interval"
-                leftIcon={{name: 'timer', type: 'material-community'}}
+                leftIcon={{ name: 'timer', type: 'material-community' }}
                 bottomDivider
                 chevron
                 onPress={() => navigation.navigate('Interval')}
             />
             <ListItem
                 title="Wifi"
-                leftIcon={{name: 'wifi', type: 'material-community'}}
+                leftIcon={{ name: 'wifi', type: 'material-community' }}
                 bottomDivider
                 chevron
                 onPress={() => navigation.navigate('Wifi')}

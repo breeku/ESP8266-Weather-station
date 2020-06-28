@@ -1,4 +1,4 @@
-import {RNToasty} from 'react-native-toasty'
+import { RNToasty } from 'react-native-toasty'
 
 export const TIMEZONE_OFFSET = 1.08e7 // GMT+3
 
@@ -8,10 +8,10 @@ export const updateTime = async () => {
         await fetch('http://192.168.4.1/time/?val=' + msTime, {
             method: 'POST',
         })
-        RNToasty.Success({title: 'Update success!'})
+        RNToasty.Success({ title: 'Update success!' })
         return true
     } catch (e) {
-        RNToasty.Error({title: 'Update failed'})
+        RNToasty.Error({ title: 'Update failed' })
         console.warn('updateTime', e)
         return false
     }

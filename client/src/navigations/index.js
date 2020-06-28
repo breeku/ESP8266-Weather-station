@@ -1,9 +1,9 @@
 import React from 'react'
 
-import {NavigationContainer} from '@react-navigation/native'
-import {createBottomTabNavigator} from '@react-navigation/bottom-tabs'
+import { NavigationContainer } from '@react-navigation/native'
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 
-import {Icon} from 'react-native-elements'
+import { Icon } from 'react-native-elements'
 
 import Home from '_scenes/home'
 import Sensors from '_scenes/sensors'
@@ -16,8 +16,8 @@ const Navigator = () => {
         <>
             <NavigationContainer>
                 <Tab.Navigator
-                    screenOptions={({route}) => ({
-                        tabBarIcon: ({focused, color, size}) => {
+                    screenOptions={({ route }) => ({
+                        tabBarIcon: ({ focused, color, size }) => {
                             let iconName
 
                             if (route.name === 'Home') {

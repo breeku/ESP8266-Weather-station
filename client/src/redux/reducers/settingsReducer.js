@@ -2,7 +2,7 @@
 const initialState = {
     permissions: false,
     autoWifi: false,
-    credentials: {SSID: null, password: null, isWep: null},
+    credentials: { SSID: null, password: null, isWep: null },
 } // Reducers (Modifies The State And Returns A New State)
 const settingsReducer = (state = initialState, action) => {
     switch (

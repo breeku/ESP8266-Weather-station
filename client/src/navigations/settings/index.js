@@ -1,6 +1,6 @@
 import React from 'react'
 
-import {createStackNavigator} from '@react-navigation/stack'
+import { createStackNavigator } from '@react-navigation/stack'
 
 import Settings from '_scenes/settings'
 import Interval from '_components/interval'

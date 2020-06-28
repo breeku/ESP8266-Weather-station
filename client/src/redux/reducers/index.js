@@ -1,5 +1,5 @@
 // Imports: Dependencies
-import {combineReducers} from 'redux' // Imports: Reducers
+import { combineReducers } from 'redux' // Imports: Reducers
 import settingsReducer from './settingsReducer'
 import wifiReducer from './wifiReducer'
 

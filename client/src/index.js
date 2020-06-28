@@ -7,19 +7,19 @@
  */
 
 import 'react-native-gesture-handler'
-import React, {useEffect} from 'react'
+import React, { useEffect } from 'react'
 
-import {PermissionsAndroid, AppState} from 'react-native'
+import { PermissionsAndroid, AppState } from 'react-native'
 
-import {connect} from 'react-redux'
+import { connect } from 'react-redux'
 
 import WifiManager from 'react-native-wifi-reborn'
 import AsyncStorage from '@react-native-community/async-storage'
 
-import {setSettings} from '_redux/actions/settingsActions'
-import {setWifi} from '_redux/actions/wifiReducer'
+import { setSettings } from '_redux/actions/settingsActions'
+import { setWifi } from '_redux/actions/wifiReducer'
 
-import {connectToWifi, getWifiName} from '_utils/wifi/'
+import { connectToWifi, getWifiName } from '_services/wifi/'
 
 import Navigator from '_navigations/'
 
@@ -50,7 +50,7 @@ const requestFineLocation = async () => {
 }
 
 const App: () => React$Node = props => {
-    const {setWifi, setSettings} = props
+    const { setWifi, setSettings } = props
 
     const _handleAppStateChange = async nextAppState => {
         if (nextAppState === 'active') {
@@ -64,14 +64,14 @@ const App: () => React$Node = props => {
                 await WifiManager.forceWifiUsage(true)
             }
 
-            setWifi({name: wifiName, ip: await WifiManager.getIP()})
+            setWifi({ name: wifiName, ip: await WifiManager.getIP() })
         } else {
             console.log('disabling wifi')
             WifiManager.setEnabled(false)
             console.log('removing wifi force')
             await WifiManager.forceWifiUsage(false)
             console.log('resetting wifi state')
-            setWifi({name: null, ip: null})
+            setWifi({ name: null, ip: null })
         }
     }
 
@@ -96,13 +96,13 @@ const App: () => React$Node = props => {
                             await AsyncStorage.getItem('@wifi_settings'),
                         ) || null
 
-                    setWifi({name: wifiName, ip: await WifiManager.getIP()})
+                    setWifi({ name: wifiName, ip: await WifiManager.getIP() })
                     setSettings({
                         autoWifi: wifiAuto,
                         permissions: permission,
                         credentials: wifiSettings
                             ? wifiSettings
-                            : {SSID: null, password: null, isWep: null},
+                            : { SSID: null, password: null, isWep: null },
                     })
 
                     if (
@@ -151,7 +151,4 @@ const mapDispatchToProps = dispatch => {
     }
 } // Exports
 
-export default connect(
-    mapStateToProps,
-    mapDispatchToProps,
-)(App)
+export default connect(mapStateToProps, mapDispatchToProps)(App)

@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useCallback} from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 
 import {
     StyleSheet,
@@ -18,20 +18,20 @@ import {
     Button,
 } from 'react-native-elements'
 
-import {connect} from 'react-redux'
+import { connect } from 'react-redux'
 
 import WifiManager from 'react-native-wifi-reborn'
 
 import AsyncStorage from '@react-native-community/async-storage'
 
-import {RNToasty} from 'react-native-toasty'
+import { RNToasty } from 'react-native-toasty'
 
-import {setWifiName} from '_redux/actions/wifiReducer'
-import {setWifiIP} from '_redux/actions/wifiReducer'
+import { setWifiName } from '_redux/actions/wifiReducer'
+import { setWifiIP } from '_redux/actions/wifiReducer'
 
-import {connectToWifi} from '_utils/wifi'
+import { connectToWifi } from '_services/wifi'
 
-import {encryptPassword} from '_utils/encrypt'
+import { encryptPassword } from '_utils/encrypt'
 
 const styles = StyleSheet.create({
     root: {
@@ -48,7 +48,7 @@ const styles = StyleSheet.create({
     },
     listItem: {
         shadowColor: '#000',
-        shadowOffset: {width: 0, height: 1},
+        shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.8,
         shadowRadius: 2,
         elevation: 5,
@@ -66,7 +66,7 @@ const styles = StyleSheet.create({
 })
 
 const Wifi = props => {
-    const {setWifi, settings, wifi} = props
+    const { setWifi, settings, wifi } = props
 
     const [wifiList, setWifiList] = useState(null)
     const [wifiSettingsOverlay, setWifiSettingsOverlay] = useState(false)
@@ -110,7 +110,7 @@ const Wifi = props => {
         }
         const connected = await connectToWifi(obj)
         if (connected) {
-            setWifi({name: obj.SSID, ip: await WifiManager.getIP()})
+            setWifi({ name: obj.SSID, ip: await WifiManager.getIP() })
             if (wifiName.includes('ESP')) {
                 console.log('forcing wifi usage')
                 await WifiManager.forceWifiUsage(true)
@@ -126,7 +126,7 @@ const Wifi = props => {
             )
             setAutoConnectWifi(!autoConnectWifi)
         } else {
-            RNToasty.Error({title: 'Settings are empty'})
+            RNToasty.Error({ title: 'Settings are empty' })
         }
     }
 
@@ -160,7 +160,7 @@ const Wifi = props => {
                         onRefresh={onRefresh}
                     />
                 }>
-                <Text h3 style={{textAlign: 'center'}}>
+                <Text h3 style={{ textAlign: 'center' }}>
                     Wifi
                 </Text>
                 <View style={styles.settings}>
@@ -184,7 +184,7 @@ const Wifi = props => {
                 <Overlay
                     isVisible={wifiSettingsOverlay}
                     onBackdropPress={toggleWifiSettingsOverlay}>
-                    <View style={{width: 200}}>
+                    <View style={{ width: 200 }}>
                         <CheckBox
                             title="Secure"
                             checkedIcon="dot-circle-o"
@@ -273,7 +273,7 @@ const Wifi = props => {
                 <Overlay
                     isVisible={wifiPasswordOverlay}
                     onBackdropPress={toggleWifiPasswordOverlay}>
-                    <View style={{width: 200}}>
+                    <View style={{ width: 200 }}>
                         <Input
                             onChangeText={text => setWifiPassword(text)}
                             placeholder="Password"
@@ -308,7 +308,4 @@ const mapDispatchToProps = dispatch => {
     }
 } // Exports
 
-export default connect(
-    mapStateToProps,
-    mapDispatchToProps,
-)(Wifi)
+export default connect(mapStateToProps, mapDispatchToProps)(Wifi)

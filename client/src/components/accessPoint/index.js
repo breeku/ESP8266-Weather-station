@@ -1,14 +1,14 @@
-import React, {useState} from 'react'
+import React, { useState } from 'react'
 
-import {StyleSheet, View} from 'react-native'
+import { StyleSheet, View } from 'react-native'
 
-import {Text, Input, Button} from 'react-native-elements'
+import { Text, Input, Button } from 'react-native-elements'
 
-import {RNToasty} from 'react-native-toasty'
+import { RNToasty } from 'react-native-toasty'
 
 import WifiManager from 'react-native-wifi-reborn'
 
-import {postAccessPoint} from '_utils/system'
+import { postAccessPoint } from '_services/system'
 
 const styles = StyleSheet.create({
     accessPointInput: {
@@ -56,7 +56,7 @@ const AccessPoint = () => {
 
     return (
         <View>
-            <Text h3 style={{textAlign: 'center'}}>
+            <Text h3 style={{ textAlign: 'center' }}>
                 Access Point
             </Text>
             <Input

@@ -1,6 +1,6 @@
-import {RNToasty} from 'react-native-toasty'
+import { RNToasty } from 'react-native-toasty'
 import WifiManager from 'react-native-wifi-reborn'
-import {decryptPassword} from '_utils/encrypt'
+import { decryptPassword } from '_utils/encrypt'
 
 async function delay(ms) {
     // return await for better async stack trace support in case of errors.
@@ -10,17 +10,17 @@ async function delay(ms) {
 export const connectToWifi = async credentials => {
     try {
         credentials.password = decryptPassword(credentials.password)
-        RNToasty.Info({title: 'Attempting to connect...', duration: 1})
+        RNToasty.Info({ title: 'Attempting to connect...', duration: 1 })
         await WifiManager.connectToProtectedSSID(
             credentials.SSID,
             credentials.password,
             credentials.isWep,
         )
-        RNToasty.Success({title: 'Connection success!'})
+        RNToasty.Success({ title: 'Connection success!' })
         return true
     } catch (e) {
         console.warn('connectToWifi', e)
-        RNToasty.Error({title: 'Connection failed'})
+        RNToasty.Error({ title: 'Connection failed' })
         return false
     }
 }
@@ -32,7 +32,7 @@ export const getWifiName = async () => {
         let wifiName = await WifiManager.getCurrentWifiSSID()
         while (wifiName.includes('unknown ssid')) {
             if (tries >= triesMax) {
-                RNToasty.Error({title: 'Couldnt find ssid'})
+                RNToasty.Error({ title: 'Couldnt find ssid' })
                 break
             }
             // wifi is not yet ready
@@ -43,7 +43,7 @@ export const getWifiName = async () => {
             tries++
             wifiName = await WifiManager.getCurrentWifiSSID()
         }
-        if (tries > 0) RNToasty.Success({title: 'Found SSID!'})
+        if (tries > 0) RNToasty.Success({ title: 'Found SSID!' })
         return wifiName
     } catch (e) {
         console.warn(e)
