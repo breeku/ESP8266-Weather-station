@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { useState, useCallback } from 'react'
 
 import {
     StyleSheet,
@@ -10,6 +10,8 @@ import {
     ActivityIndicator,
 } from 'react-native'
 import { Text } from 'react-native-elements'
+
+import { useFocusEffect } from '@react-navigation/native'
 
 import { ProgressChart } from 'react-native-chart-kit'
 
@@ -47,20 +49,34 @@ const Home = props => {
         setRefreshing(false)
     }, [wifi, refreshing])
 
-    useEffect(() => {
-        console.log('home')
-        const getData = async () => {
-            try {
-                const data = await getSystemInfo()
-                setMemory(data.memory)
-                setFileSystem(data.filesystem)
-            } catch (e) {
-                console.warn(e)
-            }
-        }
+    useFocusEffect(
+        useCallback(() => {
+            console.log('home')
+            let active = true
 
-        if (wifi.name && wifi.name.includes('ESP')) getData()
-    }, [wifi])
+            const getData = async () => {
+                try {
+                    const data = await getSystemInfo()
+                    if (active) {
+                        setMemory(data.memory)
+                        setFileSystem(data.filesystem)
+                    }
+                } catch (e) {
+                    console.warn(e)
+                }
+            }
+            if (
+                (!filesystem || !memory) &&
+                wifi.name &&
+                wifi.name.includes('ESP')
+            )
+                getData()
+
+            return () => {
+                active = false
+            }
+        }, [wifi]),
+    )
 
     return (
         <SafeAreaView style={styles.root}>

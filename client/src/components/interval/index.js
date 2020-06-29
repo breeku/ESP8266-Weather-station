@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useCallback } from 'react'
 
 import {
     StyleSheet,
@@ -7,6 +7,8 @@ import {
     RefreshControl,
 } from 'react-native'
 import { Text, Input, Button, Slider } from 'react-native-elements'
+
+import { useFocusEffect } from '@react-navigation/native'
 
 import { connect } from 'react-redux'
 
@@ -34,16 +36,25 @@ const Interval = props => {
         setRefreshing(false)
     }, [wifi, refreshing])
 
-    useEffect(() => {
-        const getData = async () => {
-            try {
-                setInterval((await getInterval()) / 60000)
-            } catch (e) {
-                console.warn(e)
+    useFocusEffect(
+        useCallback(() => {
+            console.log('interval')
+            let active = true
+
+            const getData = async () => {
+                try {
+                    if (active) setInterval((await getInterval()) / 60000)
+                } catch (e) {
+                    console.warn(e)
+                }
             }
-        }
-        if (wifi.name && wifi.name.includes('ESP')) getData()
-    }, [])
+            if (wifi.name && wifi.name.includes('ESP')) getData()
+
+            return () => {
+                active = false
+            }
+        }, [wifi]),
+    )
 
     const handleIntervalUpdate = async () => {
         setUpdatingInterval(true)

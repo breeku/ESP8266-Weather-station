@@ -18,6 +18,8 @@ import {
     Button,
 } from 'react-native-elements'
 
+import { useFocusEffect } from '@react-navigation/native'
+
 import { connect } from 'react-redux'
 
 import WifiManager from 'react-native-wifi-reborn'
@@ -89,18 +91,30 @@ const Wifi = props => {
         setRefreshing(false)
     }, [wifi, refreshing])
 
-    useEffect(() => {
-        console.log('wifieffect')
-        const getData = async () => {
-            try {
-                const getWifiList = JSON.parse(await WifiManager.loadWifiList())
-                setWifiList(getWifiList)
-            } catch (e) {
-                console.warn(e)
+    useFocusEffect(
+        useCallback(() => {
+            console.log('wifi')
+            let active = true
+
+            const getData = async () => {
+                try {
+                    const getWifiList = JSON.parse(
+                        await WifiManager.loadWifiList(),
+                    )
+                    if (active) setWifiList(getWifiList)
+                } catch (e) {
+                    console.warn(e)
+                }
             }
-        }
-        getData()
-    }, [])
+            getData()
+
+            return () => {
+                active = false
+            }
+        }, []),
+    )
+
+    useEffect(() => {}, [])
 
     const handleConnectWifi = async d => {
         const data = d || wifiConnect

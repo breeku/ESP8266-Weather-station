@@ -73,6 +73,8 @@ void handleAccessPointPOST() {
 void handleSystemInfoGET() {
   long fh = ESP.getFreeHeap();
   LittleFS.info(fs_info);
+  printf("LittleFS: %lu of %lu bytes used.\n",
+         fs_info.usedBytes, fs_info.totalBytes);
   String result = "{\"memory\": ";
   result +=  "{\"free\": ";
   result += fh;
@@ -111,17 +113,25 @@ void handleSensorsGET() {
   if (server.hasArg("offset")) {
     String result;
     long bytesRead = 0;
+    int i = 0;
     int readings = 0;
     long freeHeap;
+    long fileSize;
+    long offset;
     char character[2];
+    char sensorObj[65];
     bool maxReached = false;
-    int offset = server.arg("offset").toInt();
 
     freeHeap = ESP.getFreeHeap();
     Serial.println(freeHeap);
 
     Serial.println("Reading from file");
     File file = LittleFS.open("/sensors.txt", "r");
+
+    offset = server.arg("offset").toInt();
+
+    if (offset > 50) offset = findEntryPoint(offset, file);
+
 
     result += "{\"sensors\": [";
 
@@ -139,10 +149,14 @@ void handleSensorsGET() {
       character[0] = file.read();
       character[1] = '\0';
 
-      result += character;
+      sensorObj[i] = character[0];
 
+      i++;
       bytesRead++;
       if (strcmp(character, "}") == 0) {
+        sensorObj[i] = '\0';
+        result += sensorObj;
+        i = 0;
         readings++;
         if (freeHeap < minHeapThreshold) {
           maxReached = true;
@@ -150,6 +164,8 @@ void handleSensorsGET() {
         }
       }
     }
+
+    fileSize = file.size();
 
     file.close();
 
@@ -164,8 +180,8 @@ void handleSensorsGET() {
       result += true;
     }
 
-    result += ", \"total\": ";
-    result += readings;
+    result += ", \"size\": ";
+    result += fileSize;
 
     result += "}";
 
@@ -205,37 +221,26 @@ void handleFrequencyGET() {
   server.send(200, "application/json", result);
 }
 
-void setup()
-{
-  Serial.begin(115200);
-  Serial.setDebugOutput(true);
-  Serial.setTimeout(2000);
-  while (!Serial) {}
-  Serial.println("Setup start");
+//
+// given offset and file, find's the next
+// entry point (where the object ends),
+// adds 3 bytes to offset (to remove the ,)
+// and returns it.
+//
+long findEntryPoint(long offset, File &file) {
+  char character[2];
+  long bytes = 0;
+  file.seek(offset, SeekSet);
+  while (file.available()) {
+    character[0] = file.read();
+    character[1] = '\0';
 
-  bool success = LittleFS.begin();
-
-  if (success) {
-    Serial.println("File system mounted with success");
-  } else {
-    Serial.println("Error mounting the file system");
-  }
-
-  /*
-    File file = LittleFS.open("/sensors.txt", "w");
-    if (file) {
-    file.print("");
+    bytes++;
+    if (strcmp(character, "}") == 0) {
+      return (offset + bytes) + 3;
     }
-  */
 
-  LittleFS.info(fs_info);
-  printf("LittleFS: %lu of %lu bytes used.\n",
-         fs_info.usedBytes, fs_info.totalBytes);
-
-  am2320.begin();
-  setupWiFi();
-
-  Serial.println("Setup done");
+  }
 }
 
 String dataToJSON (long timestamp = 0) {
@@ -262,14 +267,16 @@ String dataToJSON (long timestamp = 0) {
 }
 
 void saveSensorData() {
-  LittleFS.info(fs_info);
-  printf("LittleFS: %lu of %lu bytes used.\n",
+  /*
+    LittleFS.info(fs_info);
+    printf("LittleFS: %lu of %lu bytes used.\n",
          fs_info.usedBytes, fs_info.totalBytes);
 
-  if (fs_info.totalBytes - fs_info.usedBytes < 1000) {
+    if (fs_info.totalBytes - fs_info.usedBytes < 1000) {
     fileFull = true;
     return;
-  }
+    }
+  */
 
   File file = LittleFS.open("/sensors.txt", "a");
   if (!file) {
@@ -323,6 +330,40 @@ void setupWiFi()
 
   server.begin();
   Serial.println("HTTP server started");
+}
+
+void setup()
+{
+  Serial.begin(115200);
+  Serial.setDebugOutput(true);
+  Serial.setTimeout(2000);
+  while (!Serial) {}
+  Serial.println("Setup start");
+
+  bool success = LittleFS.begin();
+
+  if (success) {
+    Serial.println("File system mounted with success");
+  } else {
+    Serial.println("Error mounting the file system");
+  }
+
+  /*
+    File file = LittleFS.open("/sensors.txt", "w");
+    if (file) {
+    file.print("");
+    }
+    file.close();
+  */
+
+  LittleFS.info(fs_info);
+  printf("LittleFS: %lu of %lu bytes used.\n",
+         fs_info.usedBytes, fs_info.totalBytes);
+
+  am2320.begin();
+  setupWiFi();
+
+  Serial.println("Setup done");
 }
 
 void loop()

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { useState, useCallback } from 'react'
 
 import {
     Dimensions,
@@ -10,6 +10,8 @@ import {
     ActivityIndicator,
 } from 'react-native'
 import { Text, ButtonGroup } from 'react-native-elements'
+
+import { useFocusEffect } from '@react-navigation/native'
 
 import { connect } from 'react-redux'
 
@@ -36,41 +38,65 @@ const styles = StyleSheet.create({
 })
 
 const Sensors = props => {
-    const { settings, wifi } = props
-    const [sensors, setSensors] = useState(null)
+    const { wifi } = props
+    const [data, setData] = useState(null)
     const [refreshing, setRefreshing] = useState(false)
     const [btnIndex, setBtnIndex] = useState(0)
     const buttons = ['5min', '10min', 'All']
     const recentTimestamp =
-        sensors && sensors.length > 0 && sensors[sensors.length - 1].timestamp
+        data &&
+        data.sensors &&
+        data.sensors.length > 0 &&
+        data.sensors[data.sensors.length - 1].timestamp
 
     const onRefresh = useCallback(async () => {
-        if (settings.permissions) {
-            setRefreshing(true)
+        setRefreshing(true)
 
-            if (wifi.name && wifi.name.includes('ESP'))
-                setSensors(await getSensorData())
-
-            setRefreshing(false)
+        if (wifi.name && wifi.name.includes('ESP')) {
+            const response = await getSensorData()
+            setData(response)
         }
+
+        setRefreshing(false)
     }, [wifi, refreshing])
 
-    const timeFilter = (data, label) => {
+    useFocusEffect(
+        useCallback(() => {
+            console.log('sensors')
+            let active = true
+
+            const getData = async () => {
+                if (active) {
+                    const response = await getSensorData()
+                    setData(response)
+                }
+            }
+            if (!data && wifi.name && wifi.name.includes('ESP')) getData()
+
+            return () => {
+                active = false
+            }
+        }, [wifi]),
+    )
+
+    const timeFilter = (d, label) => {
         if (btnIndex === 0) {
-            return data.timestamp > recentTimestamp - 300
+            return d.timestamp > recentTimestamp - 300
         } else if (btnIndex === 1) {
-            return data.timestamp > recentTimestamp - 600
+            return d.timestamp > recentTimestamp - 600
         } else {
             return !label
                 ? true
-                : data.timestamp % 86400 === 0 ||
-                      sensors.findIndex(x => x.timestamp === data.timestamp) ===
-                          sensors.length - 1
+                : d.timestamp % 86400 === 0 ||
+                      data.sensors.findIndex(
+                          x => x.timestamp === d.timestamp,
+                      ) ===
+                          data.sensors.length - 1
         }
     }
 
-    const dateFormat = data => {
-        const date = new Date(data.timestamp * 1000)
+    const dateFormat = d => {
+        const date = new Date(d.timestamp * 1000)
         if (btnIndex === 0) {
             return (
                 date.getUTCHours() +
@@ -87,31 +113,6 @@ const Sensors = props => {
             return date
         }
     }
-
-    useEffect(() => {
-        console.log('sensors')
-        if (settings.permissions) {
-            const getData = async () => {
-                let sensorsTime =
-                    JSON.parse(await AsyncStorage.getItem('@sensors_time')) ||
-                    null
-
-                if (!sensorsTime) {
-                    console.log('sensors have not been initialized!')
-                    sensorsTime = await updateTime()
-                    await AsyncStorage.setItem(
-                        '@sensors_time',
-                        JSON.stringify(sensorsTime),
-                    )
-                }
-                if (sensorsTime) {
-                    console.log('get sensors')
-                    setSensors(await getSensorData())
-                }
-            }
-            if (wifi.name && wifi.name.includes('ESP')) getData()
-        }
-    }, [wifi])
 
     return (
         <SafeAreaView style={styles.root}>
@@ -130,21 +131,25 @@ const Sensors = props => {
                         buttons={buttons}
                     />
                     {wifi.name && wifi.name.includes('ESP') ? (
-                        !sensors ? (
+                        !data ? (
                             <ActivityIndicator size="large" color="#0000ff" />
-                        ) : sensors.length === 0 ? (
+                        ) : data.sensors.length === 0 ? (
                             <Text>No data found</Text>
                         ) : (
                             <>
-                                <Text>Temperature</Text>
+                                <Text>
+                                    Amount of data points {data.sensors.length}
+                                </Text>
+                                <Text>File is {data.size / 1000} kb</Text>
+                                <Text h4>Temperature</Text>
                                 <LineChart
                                     data={{
-                                        labels: sensors
+                                        labels: data.sensors
                                             .filter(x => timeFilter(x, true))
                                             .map(x => dateFormat(x)),
                                         datasets: [
                                             {
-                                                data: sensors
+                                                data: data.sensors
                                                     .filter(x => timeFilter(x))
                                                     .map(x => x.temperature),
                                             },
@@ -178,15 +183,15 @@ const Sensors = props => {
                                         borderRadius: 16,
                                     }}
                                 />
-                                <Text>Humidity</Text>
+                                <Text h4>Humidity</Text>
                                 <LineChart
                                     data={{
-                                        labels: sensors
+                                        labels: data.sensors
                                             .filter(x => timeFilter(x, true))
                                             .map(x => dateFormat(x)),
                                         datasets: [
                                             {
-                                                data: sensors
+                                                data: data.sensors
                                                     .filter(x => timeFilter(x))
                                                     .map(x => x.humidity),
                                             },
@@ -235,7 +240,6 @@ const mapStateToProps = state => {
     // Redux Store --> Component
     return {
         wifi: state.wifiReducer,
-        settings: state.settingsReducer,
     }
 } // Map Dispatch To Props (Dispatch Actions To Reducers. Reducers Then Modify The Data And Assign It To Your Props)
 const mapDispatchToProps = dispatch => {
