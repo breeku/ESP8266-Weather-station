@@ -9,7 +9,7 @@ import {
     RefreshControl,
     ActivityIndicator,
 } from 'react-native'
-import { Text, ButtonGroup } from 'react-native-elements'
+import { Text } from 'react-native-elements'
 
 import { useFocusEffect } from '@react-navigation/native'
 
@@ -17,10 +17,12 @@ import { connect } from 'react-redux'
 
 import { LineChart } from 'react-native-chart-kit'
 
-import AsyncStorage from '@react-native-community/async-storage'
+import CalendarPicker from 'react-native-calendar-picker'
+
+import moment from 'moment'
 
 import { getSensorData } from '_services/sensors'
-import { updateTime } from '_services/time'
+import { getSensorTimes } from '_services/sensors'
 
 import { setWifi } from '_redux/actions/wifiReducer'
 
@@ -41,8 +43,7 @@ const Sensors = props => {
     const { wifi } = props
     const [data, setData] = useState(null)
     const [refreshing, setRefreshing] = useState(false)
-    const [btnIndex, setBtnIndex] = useState(0)
-    const buttons = ['5min', '10min', 'All']
+    const [times, setTimes] = useState(null)
     const recentTimestamp =
         data &&
         data.sensors &&
@@ -53,8 +54,8 @@ const Sensors = props => {
         setRefreshing(true)
 
         if (wifi.name && wifi.name.includes('ESP')) {
-            const response = await getSensorData()
-            setData(response)
+            const sensors = await getSensors()
+            setData(sensors)
         }
 
         setRefreshing(false)
@@ -66,9 +67,11 @@ const Sensors = props => {
             let active = true
 
             const getData = async () => {
+                const sensors = await getSensors()
+                const times = await getSensorTimes()
                 if (active) {
-                    const response = await getSensorData()
-                    setData(response)
+                    setTimes(times)
+                    setData(sensors)
                 }
             }
             if (!data && wifi.name && wifi.name.includes('ESP')) getData()
@@ -79,7 +82,42 @@ const Sensors = props => {
         }, [wifi]),
     )
 
+    const dateFilter = date => {
+        const current = moment.utc(date)
+        const start = moment.utc(times.timeStart)
+        const last = moment.utc(times.timeLast)
+
+        console.log(current)
+        console.log(start)
+        console.log(last)
+        if (current.isBetween(start, last, 'day', '[]')) {
+            console.log('yes')
+            return false
+        } else {
+            console.log('no')
+            return true
+        }
+    }
+
+    const getSensors = async () => {
+        let offset = 0
+        let response = await getSensorData(offset)
+        let result = response
+        /*
+        if (response.next) offset = response.next
+        if (btnIndex === 2) {
+            while (response.next) {
+                response = await getSensorData(offset)
+                if (response.next) offset += response.next
+                result.sensors = [...response.sensors]
+            }
+        }
+        */
+        return result
+    }
+
     const timeFilter = (d, label) => {
+        /*
         if (btnIndex === 0) {
             return d.timestamp > recentTimestamp - 300
         } else if (btnIndex === 1) {
@@ -93,9 +131,12 @@ const Sensors = props => {
                       ) ===
                           data.sensors.length - 1
         }
+        */
+        return d.timestamp > recentTimestamp - 300
     }
 
     const dateFormat = d => {
+        /*
         const date = new Date(d.timestamp * 1000)
         if (btnIndex === 0) {
             return (
@@ -112,6 +153,8 @@ const Sensors = props => {
         } else {
             return date
         }
+        */
+        return d
     }
 
     return (
@@ -125,11 +168,14 @@ const Sensors = props => {
                 }>
                 <View style={styles.sensors}>
                     <Text h1>Sensors</Text>
-                    <ButtonGroup
-                        onPress={i => setBtnIndex(i)}
-                        selectedIndex={btnIndex}
-                        buttons={buttons}
-                    />
+                    {times ? (
+                        <CalendarPicker
+                            disabledDates={date => dateFilter(date)}
+                        />
+                    ) : (
+                        <></>
+                    )}
+
                     {wifi.name && wifi.name.includes('ESP') ? (
                         !data ? (
                             <ActivityIndicator size="large" color="#0000ff" />
@@ -173,7 +219,7 @@ const Sensors = props => {
                                             borderRadius: 16,
                                         },
                                         propsForDots: {
-                                            r: btnIndex === 2 ? '0' : '6',
+                                            r: '6',
                                             strokeWidth: '2',
                                             stroke: '#fff',
                                         },
@@ -215,7 +261,7 @@ const Sensors = props => {
                                             borderRadius: 16,
                                         },
                                         propsForDots: {
-                                            r: btnIndex === 2 ? '0' : '6',
+                                            r: '6',
                                             strokeWidth: '2',
                                             stroke: '#fff',
                                         },

@@ -105,93 +105,158 @@ void handleTimeUpdateGET() {
   }
 }
 
+void handleSensorTimesGET() {
+  char character[2];
+  char firstObj[65];
+  char lastObj[65];
+  char reverse[65];
+  long fileSize;
+  int lenReverse;
+  String result;
+  int i = 0;
+  Serial.println("Reading from file");
+  File file = LittleFS.open("/sensors.txt", "r");
+
+  fileSize = file.size();
+
+  while (file.available()) {
+    character[0] = file.read();
+    character[1] = '\0';
+
+    firstObj[i] = character[0];
+    i++;
+    if (strcmp(character, "}") == 0) {
+      firstObj[i] = '\0';
+      break;
+    }
+  }
+
+  for (i = 0; i < 65; i++) {
+    file.seek(fileSize - i, SeekSet);
+
+    character[0] = file.read();
+    character[1] = '\0';
+
+    reverse[i] = character[0];
+
+    if (strcmp(character, "{") == 0) {
+      reverse[i + 1] = '\0';
+      break;
+    }
+  }
+
+  lenReverse = strlen(reverse);
+  for (i = 0; i < lenReverse; i++) {
+    lastObj[i] = reverse[lenReverse - 1 - i];
+  }
+
+  lastObj[i - 1] = '\0';
+
+  const size_t capacity = 3 * JSON_OBJECT_SIZE(2);
+  DynamicJsonDocument doc(capacity);
+
+  deserializeJson(doc, firstObj);
+  long t1 = doc["timestamp"];
+
+  deserializeJson(doc, lastObj);
+  long t2 = doc["timestamp"];
+
+  result += "{\"timeStart\": ";
+  result += t1; //s -> ms
+  result += ",\"timeLast\":";
+  result += t2; //s -> ms
+  result += "}";
+
+  server.send(200, "application/json", result);
+}
+
 void handleSensorsGET() {
   if (timeStatus() == timeNotSet) {
     server.send(500, "application/json", "{\"status\": \"Time needs to be updated\"}");
   }
 
-  if (server.hasArg("offset")) {
-    String result;
-    long bytesRead = 0;
-    int i = 0;
-    int readings = 0;
-    long freeHeap;
-    long fileSize;
-    long offset;
-    char character[2];
-    char sensorObj[65];
-    bool maxReached = false;
+  String result;
+  long bytesRead = 0;
+  int i = 0;
+  int readings = 0;
+  long freeHeap;
+  long fileSize;
+  long offset;
+  long maximum;
+  char character[2];
+  char sensorObj[65];
+  bool maxReached = false;
 
+  freeHeap = ESP.getFreeHeap();
+  Serial.println(freeHeap);
+
+  Serial.println("Reading from file");
+  File file = LittleFS.open("/sensors.txt", "r");
+
+  offset = server.hasArg("offset") ? server.arg("offset").toInt() : 0; // read from byte offset
+  maximum = server.hasArg("maximum") ? server.arg("maximum").toInt() : -1; // read till byte maximum
+
+  if (offset > 50) offset = findEntryPoint(offset, file); // ignore offsets less than 50b, since a data point is ~60b
+
+  result += "{\"sensors\": [";
+
+  // there is a ~44000b heap
+  // file can be up to ~300000b
+  // so we need a offset
+  // we read from offset byte till our heap is at minHeapThreshold
+  // after which we add "next" to result object
+  // so client knows to set offset = next ( + 1 ? )
+
+  file.seek(offset, SeekSet);
+
+  while (file.available()) {
     freeHeap = ESP.getFreeHeap();
-    Serial.println(freeHeap);
+    character[0] = file.read();
+    character[1] = '\0';
 
-    Serial.println("Reading from file");
-    File file = LittleFS.open("/sensors.txt", "r");
+    sensorObj[i] = character[0];
 
-    offset = server.arg("offset").toInt();
-
-    if (offset > 50) offset = findEntryPoint(offset, file);
-
-
-    result += "{\"sensors\": [";
-
-    // there is a ~44000b heap
-    // file can be up to ~300000b
-    // so we need a offset
-    // we read from offset byte till our heap is at minHeapThreshold
-    // after which we add "next" to result object
-    // so client knows to set offset = next ( + 1 ? )
-
-    file.seek(offset, SeekSet);
-
-    while (file.available()) {
-      freeHeap = ESP.getFreeHeap();
-      character[0] = file.read();
-      character[1] = '\0';
-
-      sensorObj[i] = character[0];
-
-      i++;
-      bytesRead++;
-      if (strcmp(character, "}") == 0) {
-        sensorObj[i] = '\0';
-        result += sensorObj;
-        i = 0;
-        readings++;
-        if (freeHeap < minHeapThreshold) {
-          maxReached = true;
-          break;
-        }
+    i++;
+    bytesRead++;
+    if (strcmp(character, "}") == 0) {
+      sensorObj[i] = '\0';
+      result += sensorObj;
+      i = 0;
+      readings++;
+      if (freeHeap < minHeapThreshold || (maximum != -1 && bytesRead > maximum)) {
+        maxReached = true;
+        break;
       }
     }
-
-    fileSize = file.size();
-
-    file.close();
-
-    result += "]";
-
-    if (maxReached) {
-      result += ", \"next\": ";
-      result += bytesRead;
-    }
-    if (fileFull) {
-      result += ", \"full\": ";
-      result += true;
-    }
-
-    result += ", \"size\": ";
-    result += fileSize;
-
-    result += "}";
-
-    freeHeap = ESP.getFreeHeap();
-    Serial.println(freeHeap);
-    Serial.println("Got ");
-    Serial.println(readings);
-
-    server.send(200, "application/json", result);
   }
+
+  fileSize = file.size();
+
+  file.close();
+
+  result += "]";
+
+  if (maxReached) {
+    result += ", \"next\": ";
+    result += bytesRead;
+  }
+  if (fileFull) {
+    result += ", \"full\": ";
+    result += true;
+  }
+
+  result += ", \"size\": ";
+  result += fileSize;
+
+  result += "}";
+
+  freeHeap = ESP.getFreeHeap();
+  Serial.println(freeHeap);
+  Serial.println("Got ");
+  Serial.println(readings);
+
+  server.send(200, "application/json", result);
+
 
 }
 
@@ -239,7 +304,6 @@ long findEntryPoint(long offset, File &file) {
     if (strcmp(character, "}") == 0) {
       return (offset + bytes) + 3;
     }
-
   }
 }
 
@@ -325,6 +389,7 @@ void setupWiFi()
   server.on("/time/", HTTP_POST, handleTimeUpdateGET);
   server.on("/systeminfo/", HTTP_GET, handleSystemInfoGET);
   server.on("/accesspoint/", HTTP_POST, handleAccessPointPOST);
+  server.on("/sensors/time", HTTP_GET, handleSensorTimesGET);
 
   // END-ROUTES
 
