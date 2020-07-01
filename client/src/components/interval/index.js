@@ -38,7 +38,6 @@ const Interval = props => {
 
     useFocusEffect(
         useCallback(() => {
-            console.log('interval')
             let active = true
 
             const getData = async () => {

@@ -47,38 +47,33 @@ const Sensors = props => {
     const [selectedDate, setSelectedDate] = useState(
         moment.utc().format('D-M-YYYY'),
     )
-    const recentTimestamp =
-        data &&
-        data.sensors &&
-        data.sensors.length > 0 &&
-        data.sensors[data.sensors.length - 1].timestamp
-
-    console.log(selectedDate)
 
     const onRefresh = useCallback(async () => {
         setRefreshing(true)
 
         if (wifi.name && wifi.name.includes('ESP') && selectedDate) {
             const sensors = await getSensorData(selectedDate)
-            const times = await getSensorTimes()
-            setData(sensors)
-            setTimes(times)
+            if (sensors) {
+                const times = await getSensorTimes()
+                setData(sensors)
+                setTimes(times)
+            }
         }
 
         setRefreshing(false)
     }, [wifi, refreshing])
-
     useFocusEffect(
         useCallback(() => {
-            console.log('sensors')
             let active = true
 
             const getData = async () => {
                 const sensors = await getSensorData(selectedDate)
-                const times = await getSensorTimes()
-                if (active) {
-                    setData(sensors)
-                    setTimes(times)
+                if (sensors) {
+                    const times = await getSensorTimes()
+                    if (active) {
+                        setData(sensors)
+                        setTimes(times)
+                    }
                 }
             }
             if (!data && wifi.name && wifi.name.includes('ESP') && selectedDate)
@@ -166,7 +161,7 @@ const Sensors = props => {
                                                 },
                                             ],
                                         }}
-                                        width={data.sensors.length * 50} // from react-native
+                                        width={data.sensors.length * 50 + 100} // from react-native
                                         height={270}
                                         yAxisSuffix="C"
                                         yAxisInterval={1} // optional, defaults to 1
@@ -213,7 +208,7 @@ const Sensors = props => {
                                                 },
                                             ],
                                         }}
-                                        width={data.sensors.length * 50} // from react-native
+                                        width={data.sensors.length * 50 + 100} // from react-native
                                         height={270}
                                         yAxisSuffix="%"
                                         yAxisInterval={1} // optional, defaults to 1

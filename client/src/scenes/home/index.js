@@ -51,7 +51,6 @@ const Home = props => {
 
     useFocusEffect(
         useCallback(() => {
-            console.log('home')
             let active = true
 
             const getData = async () => {

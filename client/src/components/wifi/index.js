@@ -93,7 +93,6 @@ const Wifi = props => {
 
     useFocusEffect(
         useCallback(() => {
-            console.log('wifi')
             let active = true
 
             const getData = async () => {

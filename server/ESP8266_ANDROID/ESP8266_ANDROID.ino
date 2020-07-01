@@ -135,7 +135,6 @@ void handleSensorTimesGET() {
     }
   }
 
-
   Serial.println(oldest);
   Serial.println(newest);
   Serial.println(firstAndLast[0] + " " + firstAndLast[1]);
@@ -367,9 +366,9 @@ void setup()
     Serial.println("Error mounting the file system");
   }
 
-  //bool format = LittleFS.format();
+  bool format = LittleFS.format();
 
-  //if (format) Serial.println("filesystem was formatted");
+  if (format) Serial.println("filesystem was formatted");
 
   LittleFS.info(fs_info);
   printf("LittleFS: %lu of %lu bytes used.\n",
@@ -377,6 +376,8 @@ void setup()
 
   am2320.begin();
   setupWiFi();
+
+  setSyncInterval(86400);
 
   Serial.println("Setup done");
 }
