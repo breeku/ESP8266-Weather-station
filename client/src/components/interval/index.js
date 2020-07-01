@@ -90,6 +90,9 @@ const Interval = props => {
                     }>
                     {interval}
                 </Input>
+                <Text style={{ textAlign: 'center' }}>
+                    {`One datapoint is ~60b`}
+                </Text>
                 <Button
                     containerStyle={{
                         width: '50%',

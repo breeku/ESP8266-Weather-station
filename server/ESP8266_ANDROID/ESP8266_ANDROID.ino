@@ -11,6 +11,9 @@
 const char *softAP_ssid = "ESP_ap";
 const char *softAP_password = "123123123";
 
+const size_t sensorsCapacity = JSON_ARRAY_SIZE(1) + 2 * JSON_OBJECT_SIZE(3);
+const size_t timeCapacity = JSON_OBJECT_SIZE(2);
+
 char ssid[32] = "";
 char password[32] = "";
 
@@ -25,7 +28,13 @@ long heapStart = ESP.getFreeHeap();
 
 long minHeapThreshold = 10000;
 
+long maxFileSize = 40000;
+
+int fileIterations = 0;
+
 bool fileFull = false;
+
+String currentTime = (String)day() + "-" + (String)month() + "-" + (String)year();
 
 FSInfo fs_info;
 
@@ -75,23 +84,22 @@ void handleSystemInfoGET() {
   LittleFS.info(fs_info);
   printf("LittleFS: %lu of %lu bytes used.\n",
          fs_info.usedBytes, fs_info.totalBytes);
-  String result = "{\"memory\": ";
-  result +=  "{\"free\": ";
-  result += fh;
-  result += ", \"start\": ";
-  result += heapStart;
-  result += "},";
-  result += "\"filesystem\": ";
-  result +=  "{\"used\": ";
-  result += fs_info.usedBytes;
-  result += ", \"total\": ";
-  result += fs_info.totalBytes;
-  result += "}";
-  result += "}";
-  server.send(200, "application/json", result);
+         
+  const size_t capacity = 3 * JSON_OBJECT_SIZE(2);
+  DynamicJsonDocument doc(capacity);
+
+  JsonObject memory = doc.createNestedObject("memory");
+  memory["free"] = fh;
+  memory["start"] = heapStart;
+
+  JsonObject filesystem = doc.createNestedObject("filesystem");
+  filesystem["used"] = fs_info.usedBytes;
+  filesystem["total"] = fs_info.totalBytes;
+
+  server.send(200, "application/json", doc.as<String>());
 }
 
-void handleTimeUpdateGET() {
+void handleTimeUpdatePOST() {
   if (server.hasArg("val")) {
     long arg = server.arg("val").toInt();
     Serial.println(arg);
@@ -106,158 +114,108 @@ void handleTimeUpdateGET() {
 }
 
 void handleSensorTimesGET() {
-  char character[2];
-  char firstObj[65];
-  char lastObj[65];
-  char reverse[65];
-  long fileSize;
-  int lenReverse;
-  String result;
   int i = 0;
+  long oldest = 99999999999;
+  long newest = 0;
+  String firstAndLast[1];
+
+  Serial.println("TIME GET");
+
+  Dir dir = LittleFS.openDir("/");
+  while (dir.next()) {
+    Serial.print(dir.fileName());
+    long creationTime = dir.fileCreationTime();
+    if (creationTime < oldest) {
+      oldest = creationTime;
+      firstAndLast[0] = dir.fileName();
+    }
+    if (creationTime > newest) {
+      newest = creationTime;
+      firstAndLast[1] = dir.fileName();
+    }
+  }
+
+
+  Serial.println(oldest);
+  Serial.println(newest);
+  Serial.println(firstAndLast[0] + " " + firstAndLast[1]);
+
   Serial.println("Reading from file");
-  File file = LittleFS.open("/sensors.txt", "r");
+  File file = LittleFS.open("/" + firstAndLast[0], "r");
 
-  fileSize = file.size();
-
-  while (file.available()) {
-    character[0] = file.read();
-    character[1] = '\0';
-
-    firstObj[i] = character[0];
-    i++;
-    if (strcmp(character, "}") == 0) {
-      firstObj[i] = '\0';
-      break;
-    }
+  if (!file) {
+    Serial.println("Error opening file for reading");
+    return;
   }
+  
+  long t1 = readTimestamp(file, 0, false);
+  file.close();
 
-  for (i = 0; i < 65; i++) {
-    file.seek(fileSize - i, SeekSet);
+  Serial.println("Reading from file");
+  file = LittleFS.open("/" + firstAndLast[1], "r");
 
-    character[0] = file.read();
-    character[1] = '\0';
-
-    reverse[i] = character[0];
-
-    if (strcmp(character, "{") == 0) {
-      reverse[i + 1] = '\0';
-      break;
-    }
+  if (!file) {
+    Serial.println("Error opening file for reading");
+    return;
   }
+  
+  long t2 = readTimestamp(file, 2, true);
 
-  lenReverse = strlen(reverse);
-  for (i = 0; i < lenReverse; i++) {
-    lastObj[i] = reverse[lenReverse - 1 - i];
-  }
+  file.close();
 
-  lastObj[i - 1] = '\0';
+  DynamicJsonDocument doc(timeCapacity);
 
-  const size_t capacity = 3 * JSON_OBJECT_SIZE(2);
-  DynamicJsonDocument doc(capacity);
+  doc["timeStart"] = t1;
+  doc["timeLast"] = t2;
 
-  deserializeJson(doc, firstObj);
-  long t1 = doc["timestamp"];
+  server.send(200, "application/json", doc.as<String>());
+}
 
-  deserializeJson(doc, lastObj);
-  long t2 = doc["timestamp"];
+long readTimestamp(File &file, int index, bool fromMax) {
+  long fileSize = file.size();
 
-  result += "{\"timeStart\": ";
-  result += t1; //s -> ms
-  result += ",\"timeLast\":";
-  result += t2; //s -> ms
-  result += "}";
+  DynamicJsonDocument doc(fileSize);
+  deserializeJson(doc, file);
 
-  server.send(200, "application/json", result);
+  JsonArray sensorsArr = doc["sensors"];
+  JsonObject sensors;
+  sensors = fromMax ? sensorsArr[sensorsArr.size() - index] : sensorsArr[index];
+
+  return sensors["timestamp"];
 }
 
 void handleSensorsGET() {
   if (timeStatus() == timeNotSet) {
     server.send(500, "application/json", "{\"status\": \"Time needs to be updated\"}");
   }
+  int iterations = 0;
+  int fileNumber = server.hasArg("number") ? server.arg("number").toInt() : 0;
+  String date = server.hasArg("date") ? server.arg("date") : "";
 
-  String result;
-  long bytesRead = 0;
-  int i = 0;
-  int readings = 0;
-  long freeHeap;
-  long fileSize;
-  long offset;
-  long maximum;
-  char character[2];
-  char sensorObj[65];
-  bool maxReached = false;
+  String fileName = "/" + date + ":" + fileNumber + ".json";
 
-  freeHeap = ESP.getFreeHeap();
-  Serial.println(freeHeap);
+  for (int i = 1; i < 10; i++) {
+    if (LittleFS.exists("/" + date + ":" + i + ".json")) iterations++;
+  }
+
+  Serial.println(fileName);
 
   Serial.println("Reading from file");
-  File file = LittleFS.open("/sensors.txt", "r");
-
-  offset = server.hasArg("offset") ? server.arg("offset").toInt() : 0; // read from byte offset
-  maximum = server.hasArg("maximum") ? server.arg("maximum").toInt() : -1; // read till byte maximum
-
-  if (offset > 50) offset = findEntryPoint(offset, file); // ignore offsets less than 50b, since a data point is ~60b
-
-  result += "{\"sensors\": [";
-
-  // there is a ~44000b heap
-  // file can be up to ~300000b
-  // so we need a offset
-  // we read from offset byte till our heap is at minHeapThreshold
-  // after which we add "next" to result object
-  // so client knows to set offset = next ( + 1 ? )
-
-  file.seek(offset, SeekSet);
-
-  while (file.available()) {
-    freeHeap = ESP.getFreeHeap();
-    character[0] = file.read();
-    character[1] = '\0';
-
-    sensorObj[i] = character[0];
-
-    i++;
-    bytesRead++;
-    if (strcmp(character, "}") == 0) {
-      sensorObj[i] = '\0';
-      result += sensorObj;
-      i = 0;
-      readings++;
-      if (freeHeap < minHeapThreshold || (maximum != -1 && bytesRead > maximum)) {
-        maxReached = true;
-        break;
-      }
-    }
+  File file = LittleFS.open(fileName, "r");
+  if (!file) {
+    Serial.println("Error opening file for writing");
+    server.send(500, "application/json", "{\"status\": \"File not found\"}");
+    return;
   }
 
-  fileSize = file.size();
+  DynamicJsonDocument doc(ESP.getMaxFreeBlockSize() - 100);
+  deserializeJson(doc, file);
 
-  file.close();
+  doc["next"] = iterations;
 
-  result += "]";
+  doc.shrinkToFit();
 
-  if (maxReached) {
-    result += ", \"next\": ";
-    result += bytesRead;
-  }
-  if (fileFull) {
-    result += ", \"full\": ";
-    result += true;
-  }
-
-  result += ", \"size\": ";
-  result += fileSize;
-
-  result += "}";
-
-  freeHeap = ESP.getFreeHeap();
-  Serial.println(freeHeap);
-  Serial.println("Got ");
-  Serial.println(readings);
-
-  server.send(200, "application/json", result);
-
-
+  server.send(200, "application/json", doc.as<String>());
 }
 
 void handleFrequencyPOST() {
@@ -277,92 +235,88 @@ void handleFrequencyPOST() {
 }
 
 void handleFrequencyGET() {
-  String result;
-
-  result += "{\"interval\": ";
-  result += interval;
-  result += "}";
-
-  server.send(200, "application/json", result);
-}
-
-//
-// given offset and file, find's the next
-// entry point (where the object ends),
-// adds 3 bytes to offset (to remove the ,)
-// and returns it.
-//
-long findEntryPoint(long offset, File &file) {
-  char character[2];
-  long bytes = 0;
-  file.seek(offset, SeekSet);
-  while (file.available()) {
-    character[0] = file.read();
-    character[1] = '\0';
-
-    bytes++;
-    if (strcmp(character, "}") == 0) {
-      return (offset + bytes) + 3;
-    }
-  }
-}
-
-String dataToJSON (long timestamp = 0) {
-  Serial.println("Reading sensors");
-  while (isnan(am2320.readTemperature()) && isnan(am2320.readHumidity())) {
-    Serial.println(am2320.readTemperature());
-  }
-
-  float temperature = am2320.readTemperature();
-  float humidity = am2320.readHumidity();
-
-  const size_t capacity = 3 * JSON_OBJECT_SIZE(2);
+  const size_t capacity = JSON_OBJECT_SIZE(1);
   DynamicJsonDocument doc(capacity);
 
-  doc["temperature"] = temperature;
-  doc["humidity"] = humidity;
-  doc["timestamp"] = now();
+  doc["interval"] = interval;
 
-  serializeJson(doc, Serial);
-
-  Serial.println("");
-
-  return doc.as<String>();
+  server.send(200, "application/json", doc.as<String>());
 }
 
 void saveSensorData() {
-  /*
-    LittleFS.info(fs_info);
-    printf("LittleFS: %lu of %lu bytes used.\n",
-         fs_info.usedBytes, fs_info.totalBytes);
+  Serial.println("Free max block heap");
+  Serial.println(ESP.getMaxFreeBlockSize());
 
-    if (fs_info.totalBytes - fs_info.usedBytes < 1000) {
-    fileFull = true;
-    return;
+  String saveTime = (String)day() + "-" + (String)month() + "-" + (String)year();
+  if (currentTime != saveTime) {
+    currentTime = saveTime;
+    fileIterations = 0;
+  };
+  String fileName = "/" + saveTime + ":" + fileIterations + ".json";
+  Serial.println(fileName);
+
+  File file = LittleFS.open(fileName, "r");
+  if (!file) {
+    Serial.println("File doesn't exist yet");
+  } else {
+    if (file.size() > maxFileSize) {
+      Serial.println("File " + fileName + " is over " + maxFileSize + "!");
+      fileIterations++;
+      fileName = "/" + saveTime + ":" + fileIterations + ".json";
+      file.close();
     }
-  */
+  }
 
-  File file = LittleFS.open("/sensors.txt", "a");
+  file = LittleFS.open(fileName, "a+");
   if (!file) {
     Serial.println("Error opening file for writing");
     return;
   }
 
-  String data = dataToJSON(previousMillis);
-
-  if (file.size() > 1) {
-    data = ',' + data;
+  Serial.println("Reading sensors");
+  while (isnan(am2320.readTemperature()) && isnan(am2320.readHumidity())) {
   }
 
-  int bytesWritten = file.println(data);
+  float temperature = am2320.readTemperature();
+  float humidity = am2320.readHumidity();
 
-  if (bytesWritten > 0) {
-    Serial.print(bytesWritten);
-    Serial.print(" bytes were written.");
-    Serial.println("");
+  if (file.size() != 0) {
+    DynamicJsonDocument doc(ESP.getMaxFreeBlockSize() - sensorsCapacity);
+    deserializeJson(doc, file);
+
+    JsonArray sensorsArr = doc["sensors"];
+
+    JsonObject sensorsObj = sensorsArr.createNestedObject();
+    sensorsObj["temperature"] = temperature;
+    sensorsObj["humidity"] = humidity;
+    sensorsObj["timestamp"] = now();
+    doc["fileSize"] = file.size();
+
+    file.close();
+    file = LittleFS.open(fileName, "w");
+    if (!file) {
+      Serial.println("Error opening file for writing");
+      return;
+    }
+
+    serializeJson(doc, file);
   } else {
-    Serial.println("File write failed");
+    DynamicJsonDocument doc(sensorsCapacity);
+
+    JsonArray sensorsArr = doc.createNestedArray("sensors");
+
+    JsonObject sensorsObj = sensorsArr.createNestedObject();
+    sensorsObj["temperature"] = temperature;
+    sensorsObj["humidity"] = humidity;
+    sensorsObj["timestamp"] = now();
+    doc["fileSize"] = sensorsCapacity;
+    doc["next"] = 0;
+
+    serializeJson(doc, file);
   }
+
+  Serial.println(file.size());
+
   file.close();
 }
 
@@ -386,7 +340,7 @@ void setupWiFi()
   server.on("/sensors/", HTTP_GET, handleSensorsGET);
   server.on("/frequency/", HTTP_GET, handleFrequencyGET);
   server.on("/frequency/", HTTP_POST, handleFrequencyPOST);
-  server.on("/time/", HTTP_POST, handleTimeUpdateGET);
+  server.on("/time/", HTTP_POST, handleTimeUpdatePOST);
   server.on("/systeminfo/", HTTP_GET, handleSystemInfoGET);
   server.on("/accesspoint/", HTTP_POST, handleAccessPointPOST);
   server.on("/sensors/time", HTTP_GET, handleSensorTimesGET);
@@ -413,13 +367,9 @@ void setup()
     Serial.println("Error mounting the file system");
   }
 
-  /*
-    File file = LittleFS.open("/sensors.txt", "w");
-    if (file) {
-    file.print("");
-    }
-    file.close();
-  */
+  //bool format = LittleFS.format();
+
+  //if (format) Serial.println("filesystem was formatted");
 
   LittleFS.info(fs_info);
   printf("LittleFS: %lu of %lu bytes used.\n",

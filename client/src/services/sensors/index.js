@@ -1,16 +1,30 @@
 import { RNToasty } from 'react-native-toasty'
 import { updateTime } from '_services/time'
 
-export const getSensorData = async (offset = 0) => {
+export const getSensorData = async date => {
+    let result = {}
+    let number = 0
     try {
         const response = await fetch(
-            'http://192.168.4.1/sensors/?offset=' + offset,
+            'http://192.168.4.1/sensors/?date=' + date + '&number=' + number,
         )
-        const json = await response.json()
+        let json = await response.json()
+        result = json
         if (json.status && json.status.includes('Time needs to be updated')) {
             throw 'updating'
         }
-        return json
+        while (json.next !== number) {
+            number++
+            const response = await fetch(
+                'http://192.168.4.1/sensors/?date=' +
+                    date +
+                    '&number=' +
+                    number,
+            )
+            json = await response.json()
+            result.sensors = [...result.sensors, ...json.sensors]
+        }
+        return result
     } catch (e) {
         if (e === 'updating') {
             const response = await updateTime()
@@ -30,6 +44,7 @@ export const getSensorTimes = async () => {
     try {
         const response = await fetch('http://192.168.4.1/sensors/time')
         const json = await response.json()
+        console.log(json)
         return {
             timeStart: json.timeStart * 1000,
             timeLast: json.timeLast * 1000,
