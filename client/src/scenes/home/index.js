@@ -9,7 +9,7 @@ import {
     RefreshControl,
     ActivityIndicator,
 } from 'react-native'
-import { Text } from 'react-native-elements'
+import { Text, Button } from 'react-native-elements'
 
 import { useFocusEffect } from '@react-navigation/native'
 
@@ -17,7 +17,10 @@ import { ProgressChart } from 'react-native-chart-kit'
 
 import { connect } from 'react-redux'
 
+import moment from 'moment'
+
 import { getSystemInfo } from '_services/system'
+import { updateTime } from '_services/time'
 
 const styles = StyleSheet.create({
     root: {
@@ -25,12 +28,17 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
+    time: {
+        paddingTop: 40,
+        paddingBottom: 40,
+    },
 })
 
 const Home = props => {
     const { wifi } = props
     const [memory, setMemory] = useState(null)
     const [filesystem, setFileSystem] = useState(null)
+    const [time, setTime] = useState(null)
     const [refreshing, setRefreshing] = useState(false)
 
     const onRefresh = useCallback(async () => {
@@ -41,6 +49,7 @@ const Home = props => {
                 const data = await getSystemInfo()
                 setMemory(data.memory)
                 setFileSystem(data.filesystem)
+                setTime(moment.utc(data.time * 1000).format())
             } catch (e) {
                 console.warn(e)
             }
@@ -59,17 +68,13 @@ const Home = props => {
                     if (active) {
                         setMemory(data.memory)
                         setFileSystem(data.filesystem)
+                        setTime(moment.utc(data.time * 1000).format())
                     }
                 } catch (e) {
                     console.warn(e)
                 }
             }
-            if (
-                (!filesystem || !memory) &&
-                wifi.name &&
-                wifi.name.includes('ESP')
-            )
-                getData()
+            if (wifi.name && wifi.name.includes('ESP')) getData()
 
             return () => {
                 active = false
@@ -93,8 +98,19 @@ const Home = props => {
                             <Text style={{ color: 'green' }}>
                                 ESP Detected!
                             </Text>
-                            {memory && filesystem ? (
+                            {memory && filesystem && time ? (
                                 <>
+                                    <View style={styles.time}>
+                                        <Text style={{ textAlign: 'center' }}>
+                                            {`Time:\n
+${time}\n
+If ESP time is different from real time, you should update it.`}
+                                        </Text>
+                                        <Button
+                                            title="Update"
+                                            onPress={updateTime}
+                                        />
+                                    </View>
                                     <Text>Memory</Text>
                                     <ProgressChart
                                         data={{

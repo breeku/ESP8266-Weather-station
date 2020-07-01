@@ -84,8 +84,8 @@ void handleSystemInfoGET() {
   LittleFS.info(fs_info);
   printf("LittleFS: %lu of %lu bytes used.\n",
          fs_info.usedBytes, fs_info.totalBytes);
-         
-  const size_t capacity = 3 * JSON_OBJECT_SIZE(2);
+
+  const size_t capacity = 2 * JSON_OBJECT_SIZE(2) + JSON_OBJECT_SIZE(3);
   DynamicJsonDocument doc(capacity);
 
   JsonObject memory = doc.createNestedObject("memory");
@@ -95,6 +95,8 @@ void handleSystemInfoGET() {
   JsonObject filesystem = doc.createNestedObject("filesystem");
   filesystem["used"] = fs_info.usedBytes;
   filesystem["total"] = fs_info.totalBytes;
+  
+  doc["time"] = now();
 
   server.send(200, "application/json", doc.as<String>());
 }
@@ -107,11 +109,13 @@ void handleTimeUpdatePOST() {
     setTime(arg);
 
     Serial.print("Time updated!");
-    server.send(200, "application/json", "{\"STATUS\": \"OK\"}");
+    server.send(200, "application/json", "{\"Time\": \"OK\"}");
   } else {
     server.send(500, "application/json", "{\"status\": \"No args found\"}");
   }
 }
+
+
 
 void handleSensorTimesGET() {
   int i = 0;
@@ -146,7 +150,7 @@ void handleSensorTimesGET() {
     Serial.println("Error opening file for reading");
     return;
   }
-  
+
   long t1 = readTimestamp(file, 0, false);
   file.close();
 
@@ -157,7 +161,7 @@ void handleSensorTimesGET() {
     Serial.println("Error opening file for reading");
     return;
   }
-  
+
   long t2 = readTimestamp(file, 2, true);
 
   file.close();
@@ -366,9 +370,9 @@ void setup()
     Serial.println("Error mounting the file system");
   }
 
-  bool format = LittleFS.format();
+  //bool format = LittleFS.format();
 
-  if (format) Serial.println("filesystem was formatted");
+  //if (format) Serial.println("filesystem was formatted");
 
   LittleFS.info(fs_info);
   printf("LittleFS: %lu of %lu bytes used.\n",

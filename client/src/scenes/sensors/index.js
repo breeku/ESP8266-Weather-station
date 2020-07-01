@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useRef } from 'react'
 
 import {
     Dimensions,
@@ -102,7 +102,7 @@ const Sensors = props => {
     }
 
     const dateFormat = d => {
-        return moment.utc(d.timestamp * 1000).format('h:mm')
+        return moment.utc(d.timestamp * 1000).format('HH:mm')
     }
 
     return (
@@ -187,6 +187,19 @@ const Sensors = props => {
                                             marginVertical: 16,
                                             borderRadius: 16,
                                         }}
+                                        renderDotContent={({ x, y, index }) => (
+                                            <Text
+                                                style={{
+                                                    position: 'absolute',
+                                                    paddingTop: y,
+                                                    paddingLeft: x,
+                                                }}>
+                                                {
+                                                    data.sensors[index]
+                                                        .temperature
+                                                }
+                                            </Text>
+                                        )}
                                     />
                                 </ScrollView>
                                 <Text h4>Humidity</Text>
@@ -234,6 +247,16 @@ const Sensors = props => {
                                             marginVertical: 8,
                                             borderRadius: 16,
                                         }}
+                                        renderDotContent={({ x, y, index }) => (
+                                            <Text
+                                                style={{
+                                                    position: 'absolute',
+                                                    paddingTop: y,
+                                                    paddingLeft: x,
+                                                }}>
+                                                {data.sensors[index].humidity}
+                                            </Text>
+                                        )}
                                     />
                                 </ScrollView>
                             </>
