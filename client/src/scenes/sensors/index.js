@@ -9,13 +9,11 @@ import {
     RefreshControl,
     ActivityIndicator,
 } from 'react-native'
-import { Text } from 'react-native-elements'
+import { Text, ButtonGroup } from 'react-native-elements'
 
 import { useFocusEffect } from '@react-navigation/native'
 
 import { connect } from 'react-redux'
-
-import { LineChart } from 'react-native-chart-kit'
 
 import CalendarPicker from 'react-native-calendar-picker'
 
@@ -25,6 +23,9 @@ import { getSensorData } from '_services/sensors'
 import { getSensorTimes } from '_services/sensors'
 
 import { setWifi } from '_redux/actions/wifiReducer'
+
+import TemperatureChart from '_components/TemperatureChart'
+import HumidityChart from '_components/HumidityChart'
 
 const styles = StyleSheet.create({
     root: {
@@ -39,44 +40,85 @@ const styles = StyleSheet.create({
     },
 })
 
+const maxLength = 200
+
+const buttonsList = [
+    '00:00 - 01:00',
+    '01:00 - 02:00',
+    '02:00 - 03:00',
+    '03:00 - 04:00',
+    '04:00 - 05:00',
+    '05:00 - 06:00',
+    '06:00 - 07:00',
+    '07:00 - 08:00',
+    '08:00 - 09:00',
+    '09:00 - 10:00',
+    '10:00 - 11:00',
+    '11:00 - 12:00',
+    '12:00 - 13:00',
+    '13:00 - 14:00',
+    '14:00 - 15:00',
+    '15:00 - 16:00',
+    '17:00 - 18:00',
+    '18:00 - 19:00',
+    '19:00 - 20:00',
+    '21:00 - 22:00',
+    '22:00 - 23:00',
+    '23:00 - 24:00',
+]
+
 const Sensors = props => {
     const { wifi } = props
     const [data, setData] = useState(null)
     const [refreshing, setRefreshing] = useState(false)
     const [times, setTimes] = useState(null)
+    const [btnIndex, setBtnIndex] = useState(0)
     const [selectedDate, setSelectedDate] = useState(
         moment.utc().format('D-M-YYYY'),
     )
+    const [buttons, setButtons] = useState(null)
+    const [btnTimes, setBtnTimes] = useState(null)
+
+    const btnView = React.useRef(null)
 
     const onRefresh = useCallback(async () => {
         setRefreshing(true)
 
         if (wifi.name && wifi.name.includes('ESP') && selectedDate) {
             const sensors = await getSensorData(selectedDate)
-            if (sensors) {
-                const times = await getSensorTimes()
-                setData(sensors)
-                setTimes(times)
+            setButtons(filterButtons(sensors.sensors))
+            setData(sensors)
+            if (sensors && !times) {
+                setTimes(await getSensorTimes())
             }
         }
 
         setRefreshing(false)
     }, [wifi, refreshing])
+
     useFocusEffect(
         useCallback(() => {
             let active = true
 
             const getData = async () => {
-                const sensors = await getSensorData(selectedDate)
-                if (sensors) {
-                    const times = await getSensorTimes()
-                    if (active) {
-                        setData(sensors)
-                        setTimes(times)
+                if (active) {
+                    const sensors = await getSensorData(selectedDate)
+
+                    setButtons(filterButtons(sensors.sensors))
+
+                    setData(sensors)
+                    if (sensors) {
+                        setTimes(await getSensorTimes())
                     }
                 }
             }
-            if (!data && wifi.name && wifi.name.includes('ESP') && selectedDate)
+            if (
+                !data &&
+                !times &&
+                wifi.name &&
+                wifi.name.includes('ESP') &&
+                selectedDate
+            )
                 getData()
 
             return () => {
@@ -84,6 +126,18 @@ const Sensors = props => {
             }
         }, [wifi]),
     )
+
+    const scrollToBtnIndex = () => {
+        if (btnView.current) {
+            const btnWidth = 115
+
+            btnView.current.scrollTo({
+                x: btnWidth * btnIndex,
+                y: 0,
+                animated: true,
+            })
+        }
+    }
 
     const dateFilter = date => {
         const current = moment.utc(date)
@@ -97,12 +151,51 @@ const Sensors = props => {
         }
     }
 
-    const timeFilter = (d, label) => {
-        return true
+    const timeFilter = (x, i) => {
+        const timestamp = moment.utc(x.timestamp * 1000)
+        if (timestamp.isBetween(btnTimes.t1, btnTimes.t2)) {
+            return true
+        } else {
+            return false
+        }
     }
 
-    const dateFormat = d => {
-        return moment.utc(d.timestamp * 1000).format('HH:mm')
+    const filteredSensors = () => {
+        return data.sensors.filter((x, i) => timeFilter(x, i))
+    }
+
+    const handleBtnIndex = i => {
+        const btnTimes = buttons[i].split('-').map(i => i.trim())
+        const t1 = moment.utc(btnTimes[0], 'H:mm')
+        const t2 = moment.utc(btnTimes[1], 'H:mm')
+
+        setBtnIndex(i)
+        setBtnTimes({ t1, t2 })
+    }
+
+    const filterButtons = sensors => {
+        let filteredButtons = []
+        const fTimestamp = moment.utc(sensors[0].timestamp * 1000)
+        const lTimestamp = moment.utc(
+            sensors[sensors.length - 1].timestamp * 1000,
+        )
+
+        for (let i = 0; i < buttonsList.length; i++) {
+            const btnTimes = buttonsList[i].split('-').map(i => i.trim())
+            const t1 = moment.utc(btnTimes[0], 'H:mm')
+
+            if (t1.isBetween(fTimestamp, lTimestamp)) {
+                filteredButtons.push(buttonsList[i])
+            }
+        }
+
+        const btnTimes = filteredButtons[btnIndex].split('-').map(i => i.trim())
+        const t1 = moment.utc(btnTimes[0], 'H:mm')
+        const t2 = moment.utc(btnTimes[1], 'H:mm')
+
+        setBtnTimes({ t1, t2 })
+
+        return filteredButtons
     }
 
     return (
@@ -137,126 +230,34 @@ const Sensors = props => {
                         ) : (
                             <>
                                 <Text>
-                                    Amount of data points {data.sensors.length}
+                                    Amount of data points{' '}
+                                    {filteredSensors().length}
                                 </Text>
                                 <Text>File is {data.fileSize / 1000} kb</Text>
                                 <Text h4>Temperature</Text>
+                                <ScrollView
+                                    horizontal={true}
+                                    ref={btnView}
+                                    onContentSizeChange={() =>
+                                        scrollToBtnIndex()
+                                    }>
+                                    <ButtonGroup
+                                        onPress={i => handleBtnIndex(i)}
+                                        selectedIndex={btnIndex}
+                                        buttons={buttons}
+                                        containerStyle={{ height: 50 }}
+                                        buttonStyle={{ padding: 10 }}
+                                    />
+                                </ScrollView>
                                 <ScrollView horizontal={true}>
-                                    <LineChart
-                                        data={{
-                                            labels: data.sensors
-                                                .filter(x =>
-                                                    timeFilter(x, true),
-                                                )
-                                                .map(x => dateFormat(x)),
-                                            datasets: [
-                                                {
-                                                    data: data.sensors
-                                                        .filter(x =>
-                                                            timeFilter(x),
-                                                        )
-                                                        .map(
-                                                            x => x.temperature,
-                                                        ),
-                                                },
-                                            ],
-                                        }}
-                                        width={data.sensors.length * 50 + 100} // from react-native
-                                        height={270}
-                                        yAxisSuffix="C"
-                                        yAxisInterval={1} // optional, defaults to 1
-                                        chartConfig={{
-                                            backgroundColor: '#fcfcfc',
-                                            backgroundGradientFrom: '#fcfcfc',
-                                            backgroundGradientTo: '#ebebeb',
-                                            decimalPlaces: 1, // optional, defaults to 2dp
-                                            color: (opacity = 1) =>
-                                                `rgba(0, 0, 0, ${opacity})`,
-                                            labelColor: (opacity = 1) =>
-                                                `rgba(0, 0, 0, ${opacity})`,
-                                            style: {
-                                                borderRadius: 16,
-                                            },
-                                            propsForDots: {
-                                                r: '6',
-                                                strokeWidth: '2',
-                                                stroke: '#fff',
-                                            },
-                                        }}
-                                        style={{
-                                            marginVertical: 16,
-                                            borderRadius: 16,
-                                        }}
-                                        renderDotContent={({ x, y, index }) => (
-                                            <Text
-                                                style={{
-                                                    position: 'absolute',
-                                                    paddingTop: y,
-                                                    paddingLeft: x,
-                                                }}>
-                                                {
-                                                    data.sensors[index]
-                                                        .temperature
-                                                }
-                                            </Text>
-                                        )}
+                                    <TemperatureChart
+                                        sensors={filteredSensors()}
                                     />
                                 </ScrollView>
                                 <Text h4>Humidity</Text>
                                 <ScrollView horizontal={true}>
-                                    <LineChart
-                                        data={{
-                                            labels: data.sensors
-                                                .filter(x =>
-                                                    timeFilter(x, true),
-                                                )
-                                                .map(x => dateFormat(x)),
-                                            datasets: [
-                                                {
-                                                    data: data.sensors
-                                                        .filter(x =>
-                                                            timeFilter(x),
-                                                        )
-                                                        .map(x => x.humidity),
-                                                },
-                                            ],
-                                        }}
-                                        width={data.sensors.length * 50 + 100} // from react-native
-                                        height={270}
-                                        yAxisSuffix="%"
-                                        yAxisInterval={1} // optional, defaults to 1
-                                        chartConfig={{
-                                            backgroundColor: '#fcfcfc',
-                                            backgroundGradientFrom: '#fcfcfc',
-                                            backgroundGradientTo: '#ebebeb',
-                                            decimalPlaces: 1, // optional, defaults to 2dp
-                                            color: (opacity = 1) =>
-                                                `rgba(0, 0, 0, ${opacity})`,
-                                            labelColor: (opacity = 1) =>
-                                                `rgba(0, 0, 0, ${opacity})`,
-                                            style: {
-                                                borderRadius: 16,
-                                            },
-                                            propsForDots: {
-                                                r: '6',
-                                                strokeWidth: '2',
-                                                stroke: '#fff',
-                                            },
-                                        }}
-                                        style={{
-                                            marginVertical: 8,
-                                            borderRadius: 16,
-                                        }}
-                                        renderDotContent={({ x, y, index }) => (
-                                            <Text
-                                                style={{
-                                                    position: 'absolute',
-                                                    paddingTop: y,
-                                                    paddingLeft: x,
-                                                }}>
-                                                {data.sensors[index].humidity}
-                                            </Text>
-                                        )}
+                                    <HumidityChart
+                                        sensors={filteredSensors()}
                                     />
                                 </ScrollView>
                             </>

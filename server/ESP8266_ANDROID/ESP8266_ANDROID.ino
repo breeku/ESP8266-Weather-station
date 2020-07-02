@@ -28,9 +28,13 @@ long heapStart = ESP.getFreeHeap();
 
 long minHeapThreshold = 10000;
 
-long maxFileSize = 40000;
+long maxFileSize = 20000;
 
 int fileIterations = 0;
+
+int iterations = 0;
+
+long t1 = 0;
 
 bool fileFull = false;
 
@@ -95,7 +99,7 @@ void handleSystemInfoGET() {
   JsonObject filesystem = doc.createNestedObject("filesystem");
   filesystem["used"] = fs_info.usedBytes;
   filesystem["total"] = fs_info.totalBytes;
-  
+
   doc["time"] = now();
 
   server.send(200, "application/json", doc.as<String>());
@@ -115,47 +119,65 @@ void handleTimeUpdatePOST() {
   }
 }
 
-
-
 void handleSensorTimesGET() {
   int i = 0;
   long oldest = 99999999999;
   long newest = 0;
-  String firstAndLast[1];
+  String firstAndLast[2] = {"", ""};
 
   Serial.println("TIME GET");
 
+  Serial.println("Max free block size");
+  Serial.println(ESP.getMaxFreeBlockSize());
+  Serial.println("Free heap");
+  Serial.println(ESP.getFreeHeap());
+
+  Serial.println("start dir");
+
   Dir dir = LittleFS.openDir("/");
   while (dir.next()) {
-    Serial.print(dir.fileName());
-    long creationTime = dir.fileCreationTime();
-    if (creationTime < oldest) {
-      oldest = creationTime;
-      firstAndLast[0] = dir.fileName();
+    if (dir.fileSize()) {
+      String filename = (String) dir.fileName();
+      Serial.print(filename);
+      long creationTime = dir.fileCreationTime();
+      if (t1 == 0) {
+        if (creationTime < oldest) {
+          oldest = creationTime;
+          firstAndLast[0] = filename;
+        }
+      }
+      if (creationTime > newest) {
+        newest = creationTime;
+        firstAndLast[1] = filename;
+      }
     }
-    if (creationTime > newest) {
-      newest = creationTime;
-      firstAndLast[1] = dir.fileName();
-    }
+
   }
+
+  Serial.println("end dir");
 
   Serial.println(oldest);
   Serial.println(newest);
-  Serial.println(firstAndLast[0] + " " + firstAndLast[1]);
+  Serial.println(firstAndLast[0]);
+  Serial.println(firstAndLast[1]);
 
-  Serial.println("Reading from file");
-  File file = LittleFS.open("/" + firstAndLast[0], "r");
+  Serial.println(t1);
 
-  if (!file) {
-    Serial.println("Error opening file for reading");
-    return;
+  if (t1 == 0) {
+    Serial.println("Reading from file");
+    File file = LittleFS.open("/" + firstAndLast[0], "r");
+
+    if (!file) {
+      Serial.println("Error opening file for reading");
+      return;
+    }
+
+    t1 = readTimestamp(file, 0, false);
+    file.close();
   }
 
-  long t1 = readTimestamp(file, 0, false);
-  file.close();
-
   Serial.println("Reading from file");
-  file = LittleFS.open("/" + firstAndLast[1], "r");
+  File file = LittleFS.open("/" + firstAndLast[1], "r");
 
   if (!file) {
     Serial.println("Error opening file for reading");
@@ -175,31 +197,34 @@ void handleSensorTimesGET() {
 }
 
 long readTimestamp(File &file, int index, bool fromMax) {
-  long fileSize = file.size();
-
-  DynamicJsonDocument doc(fileSize);
+  DynamicJsonDocument doc(ESP.getMaxFreeBlockSize() - 100);
   deserializeJson(doc, file);
+  doc.shrinkToFit();
 
   JsonArray sensorsArr = doc["sensors"];
-  JsonObject sensors;
-  sensors = fromMax ? sensorsArr[sensorsArr.size() - index] : sensorsArr[index];
+  JsonObject sensors = fromMax ? sensorsArr[sensorsArr.size() - index] : sensorsArr[index];
 
-  return sensors["timestamp"];
+  long timestamp = sensors["timestamp"];
+
+  return timestamp;
 }
 
 void handleSensorsGET() {
   if (timeStatus() == timeNotSet) {
     server.send(500, "application/json", "{\"status\": \"Time needs to be updated\"}");
   }
-  int iterations = 0;
   int fileNumber = server.hasArg("number") ? server.arg("number").toInt() : 0;
   String date = server.hasArg("date") ? server.arg("date") : "";
 
   String fileName = "/" + date + ":" + fileNumber + ".json";
 
-  for (int i = 1; i < 10; i++) {
-    if (LittleFS.exists("/" + date + ":" + i + ".json")) iterations++;
+  if (fileNumber == 0) {
+    iterations = 0;
+    for (int i = 1; i < 10; i++) {
+      if (LittleFS.exists("/" + date + ":" + i + ".json")) iterations++;
+    }
   }
+
 
   Serial.println(fileName);
 
@@ -211,14 +236,13 @@ void handleSensorsGET() {
     return;
   }
 
-  DynamicJsonDocument doc(ESP.getMaxFreeBlockSize() - 100);
-  deserializeJson(doc, file);
+  server.sendHeader("Content-Length", (String)(file.size()));
+  server.sendHeader("Next", (String)(iterations));
 
-  doc["next"] = iterations;
-
-  doc.shrinkToFit();
-
-  server.send(200, "application/json", doc.as<String>());
+  size_t fsizeSent = server.streamFile(file, "text/plain");
+  Serial.print("fsizeSent: ");
+  Serial.println(fsizeSent);
+  file.close();
 }
 
 void handleFrequencyPOST() {
@@ -247,8 +271,10 @@ void handleFrequencyGET() {
 }
 
 void saveSensorData() {
-  Serial.println("Free max block heap");
+  Serial.println("Max free block size");
   Serial.println(ESP.getMaxFreeBlockSize());
+  Serial.println("Free heap");
+  Serial.println(ESP.getFreeHeap());
 
   String saveTime = (String)day() + "-" + (String)month() + "-" + (String)year();
   if (currentTime != saveTime) {
@@ -262,7 +288,7 @@ void saveSensorData() {
   if (!file) {
     Serial.println("File doesn't exist yet");
   } else {
-    if (file.size() > maxFileSize) {
+    if (file.size() > maxFileSize - sensorsCapacity) {
       Serial.println("File " + fileName + " is over " + maxFileSize + "!");
       fileIterations++;
       fileName = "/" + saveTime + ":" + fileIterations + ".json";
@@ -284,7 +310,7 @@ void saveSensorData() {
   float humidity = am2320.readHumidity();
 
   if (file.size() != 0) {
-    DynamicJsonDocument doc(ESP.getMaxFreeBlockSize() - sensorsCapacity);
+    DynamicJsonDocument doc(ESP.getMaxFreeBlockSize() - 100);
     deserializeJson(doc, file);
 
     JsonArray sensorsArr = doc["sensors"];
@@ -294,6 +320,9 @@ void saveSensorData() {
     sensorsObj["humidity"] = humidity;
     sensorsObj["timestamp"] = now();
     doc["fileSize"] = file.size();
+    doc["next"] = fileIterations;
+
+    doc.shrinkToFit();
 
     file.close();
     file = LittleFS.open(fileName, "w");
@@ -301,7 +330,6 @@ void saveSensorData() {
       Serial.println("Error opening file for writing");
       return;
     }
-
     serializeJson(doc, file);
   } else {
     DynamicJsonDocument doc(sensorsCapacity);
@@ -313,12 +341,17 @@ void saveSensorData() {
     sensorsObj["humidity"] = humidity;
     sensorsObj["timestamp"] = now();
     doc["fileSize"] = sensorsCapacity;
-    doc["next"] = 0;
+    doc["next"] = fileIterations;
 
     serializeJson(doc, file);
   }
 
   Serial.println(file.size());
+
+  Serial.println("Max free block size");
+  Serial.println(ESP.getMaxFreeBlockSize());
+  Serial.println("Free heap");
+  Serial.println(ESP.getFreeHeap());
 
   file.close();
 }

@@ -9,13 +9,15 @@ export const getSensorData = async date => {
             'http://192.168.4.1/sensors/?date=' + date + '&number=' + number,
         )
         let json = await response.json()
+        const next = response.headers.get('next')
         result = json
         if (json.status && json.status.includes('Time needs to be updated')) {
             throw 'updating'
         } else if (json.status && json.status.includes('File not found')) {
             throw '404'
         }
-        while (json.next !== number) {
+        while (next > number) {
+            console.log(number, next)
             number++
             const response = await fetch(
                 'http://192.168.4.1/sensors/?date=' +
@@ -24,6 +26,10 @@ export const getSensorData = async date => {
                     number,
             )
             json = await response.json()
+            if (json.status && json.status.includes('File not found')) {
+                throw '404'
+            }
+            RNToasty.Info({ title: number + '/' + next })
             result.sensors = [...result.sensors, ...json.sensors]
         }
         return result
