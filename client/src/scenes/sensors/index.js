@@ -82,7 +82,7 @@ const buttonsList = [
     '23:00 - 23:59',
 ]
 
-const buttonTimeToMoment = (btn, date = selectedDate) =>
+const buttonTimeToMoment = (btn, date) =>
     moment.utc(btn, 'H:mm').dayOfYear(moment.utc(date, 'D-M-YYYY').dayOfYear())
 
 const splitButtonsList = (arr, i) => arr[i].split('-').map(i => i.trim())
@@ -107,10 +107,13 @@ const Sensors = props => {
 
         if (wifi.name && wifi.name.includes('ESP') && selectedDate) {
             const sensors = await getSensorData(selectedDate)
-            setButtons(filterButtons(sensors.sensors))
+            const filteredButtons = filterButtons(sensors)
+
+            setButtons(filteredButtons)
             setData(sensors)
             if (sensors && !times) {
-                setTimes(await getSensorTimes())
+                const sensorTimes = await getSensorTimes()
+                setTimes(sensorTimes)
             }
         }
 
@@ -124,12 +127,13 @@ const Sensors = props => {
             const getData = async () => {
                 if (active) {
                     const sensors = await getSensorData(selectedDate)
+                    const filteredButtons = filterButtons(sensors)
 
-                    setButtons(filterButtons(sensors))
-
+                    setButtons(filteredButtons)
                     setData(sensors)
                     if (sensors) {
-                        setTimes(await getSensorTimes())
+                        const sensorTimes = await getSensorTimes()
+                        setTimes(sensorTimes)
                     }
                 }
             }
