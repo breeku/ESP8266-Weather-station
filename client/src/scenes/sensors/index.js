@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react'
+import React, { useState, useCallback, useMemo, useRef } from 'react'
 
 import {
     Dimensions,
@@ -83,7 +83,7 @@ const buttonsList = [
 ]
 
 const buttonTimeToMoment = (btn, date) =>
-    moment.utc(btn, 'H:mm').dayOfYear(moment.utc(date, 'D-M-YYYY').dayOfYear())
+    moment.utc(btn, 'H:mm').dayOfYear(moment.utc(date, 'D-M-YYYY').dayOfYear()) // set the day of year same to the of date. breaks next year?
 
 const splitButtonsList = (arr, i) => arr[i].split('-').map(i => i.trim())
 
@@ -100,7 +100,7 @@ const Sensors = props => {
     const [btnTimes, setBtnTimes] = useState(null)
     const [loadingSensors, setLoadingSensors] = useState(false)
 
-    const btnView = React.useRef(null)
+    const btnView = useRef(null)
 
     const onRefresh = useCallback(async () => {
         setRefreshing(true)
@@ -191,10 +191,7 @@ const Sensors = props => {
                 }
             })
 
-    const memoizedSensors = React.useMemo(() => filteredSensors, [
-        data,
-        btnIndex,
-    ])
+    const memoizedSensors = useMemo(() => filteredSensors, [data, btnIndex])
 
     const handleBtnIndex = i => {
         const btnTimes = splitButtonsList(buttons, i)

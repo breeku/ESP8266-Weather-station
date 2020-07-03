@@ -20,13 +20,11 @@ char password[32] = "";
 ESP8266WebServer server(80);
 Adafruit_AM2320 am2320 = Adafruit_AM2320();
 
-unsigned long previousMillis = 0; // will store last time LED was updated
+unsigned long previousMillis = 0; 
 
-long interval = 60000; // interval at which to take snapshot (milliseconds) 300000 = 5min
+long interval = 60000;
 
 long heapStart = ESP.getFreeHeap();
-
-long minHeapThreshold = 10000;
 
 long maxFileSize = 20000;
 
@@ -35,8 +33,6 @@ int fileIterations = 0;
 int iterations = 0;
 
 long t1 = 0;
-
-bool fileFull = false;
 
 String currentTime = (String)day() + "-" + (String)month() + "-" + (String)year();
 
@@ -426,6 +422,6 @@ void loop()
 
   if (timeStatus() != timeNotSet && currentMillis - previousMillis >= interval) {
     previousMillis = currentMillis;
-    if (!fileFull) saveSensorData();
+    saveSensorData();
   }
 }

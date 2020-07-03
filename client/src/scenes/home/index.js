@@ -102,9 +102,9 @@ const Home = props => {
                                 <>
                                     <View style={styles.time}>
                                         <Text style={{ textAlign: 'center' }}>
-                                            {`Time:\n
+                                            {`System time:\n
 ${time}\n
-If ESP time is different from real time, you should update it.`}
+`}
                                         </Text>
                                         <Button
                                             title="Update"
