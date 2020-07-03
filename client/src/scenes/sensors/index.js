@@ -40,7 +40,22 @@ const styles = StyleSheet.create({
     },
 })
 
-const maxLength = 200
+const chartConfig = {
+    backgroundColor: '#fcfcfc',
+    backgroundGradientFrom: '#fcfcfc',
+    backgroundGradientTo: '#ebebeb',
+    decimalPlaces: 1, // optional, defaults to 2dp
+    color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+    labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+    style: {
+        borderRadius: 16,
+    },
+    propsForDots: {
+        r: '6',
+        strokeWidth: '2',
+        stroke: '#fff',
+    },
+}
 
 const buttonsList = [
     '00:00 - 01:00',
@@ -64,8 +79,13 @@ const buttonsList = [
     '19:00 - 20:00',
     '21:00 - 22:00',
     '22:00 - 23:00',
-    '23:00 - 24:00',
+    '23:00 - 23:59',
 ]
+
+const buttonTimeToMoment = (btn, date = selectedDate) =>
+    moment.utc(btn, 'H:mm').dayOfYear(moment.utc(date, 'D-M-YYYY').dayOfYear())
+
+const splitButtonsList = (arr, i) => arr[i].split('-').map(i => i.trim())
 
 const Sensors = props => {
     const { wifi } = props
@@ -78,6 +98,7 @@ const Sensors = props => {
     )
     const [buttons, setButtons] = useState(null)
     const [btnTimes, setBtnTimes] = useState(null)
+    const [loadingSensors, setLoadingSensors] = useState(false)
 
     const btnView = React.useRef(null)
 
@@ -104,7 +125,7 @@ const Sensors = props => {
                 if (active) {
                     const sensors = await getSensorData(selectedDate)
 
-                    setButtons(filterButtons(sensors.sensors))
+                    setButtons(filterButtons(sensors))
 
                     setData(sensors)
                     if (sensors) {
@@ -151,29 +172,36 @@ const Sensors = props => {
         }
     }
 
-    const timeFilter = (x, i) => {
-        const timestamp = moment.utc(x.timestamp * 1000)
-        if (timestamp.isBetween(btnTimes.t1, btnTimes.t2)) {
-            return true
-        } else {
-            return false
-        }
-    }
+    const filteredSensors =
+        data &&
+        data.sensors
+            .filter(x =>
+                moment
+                    .utc(x.timestamp * 1000)
+                    .isBetween(btnTimes.t1, btnTimes.t2),
+            )
+            .map(x => {
+                return {
+                    ...x,
+                    timestamp: moment.utc(x.timestamp * 1000).format('HH:mm'),
+                }
+            })
 
-    const filteredSensors = () => {
-        return data.sensors.filter((x, i) => timeFilter(x, i))
-    }
+    const memoizedSensors = React.useMemo(() => filteredSensors, [
+        data,
+        btnIndex,
+    ])
 
     const handleBtnIndex = i => {
-        const btnTimes = buttons[i].split('-').map(i => i.trim())
-        const t1 = moment.utc(btnTimes[0], 'H:mm')
-        const t2 = moment.utc(btnTimes[1], 'H:mm')
+        const btnTimes = splitButtonsList(buttons, i)
+        const t1 = buttonTimeToMoment(btnTimes[0], selectedDate)
+        const t2 = buttonTimeToMoment(btnTimes[1], selectedDate)
 
         setBtnIndex(i)
         setBtnTimes({ t1, t2 })
     }
 
-    const filterButtons = sensors => {
+    const filterButtons = ({ sensors }) => {
         let filteredButtons = []
         const fTimestamp = moment.utc(sensors[0].timestamp * 1000)
         const lTimestamp = moment.utc(
@@ -181,21 +209,36 @@ const Sensors = props => {
         )
 
         for (let i = 0; i < buttonsList.length; i++) {
-            const btnTimes = buttonsList[i].split('-').map(i => i.trim())
-            const t1 = moment.utc(btnTimes[0], 'H:mm')
+            const btnTimes = splitButtonsList(buttonsList, i)
+            const t1 = buttonTimeToMoment(btnTimes[0], fTimestamp)
 
             if (t1.isBetween(fTimestamp, lTimestamp)) {
                 filteredButtons.push(buttonsList[i])
             }
         }
 
-        const btnTimes = filteredButtons[btnIndex].split('-').map(i => i.trim())
-        const t1 = moment.utc(btnTimes[0], 'H:mm')
-        const t2 = moment.utc(btnTimes[1], 'H:mm')
+        const btnTimes = splitButtonsList(filteredButtons, 0)
+        const t1 = buttonTimeToMoment(btnTimes[0], fTimestamp)
+        const t2 = buttonTimeToMoment(btnTimes[1], fTimestamp)
 
         setBtnTimes({ t1, t2 })
 
         return filteredButtons
+    }
+
+    const handleDateChange = async date => {
+        setLoadingSensors(true)
+
+        const formattedDate = moment.utc(date).format('D-M-YYYY')
+        const sensors = await getSensorData(formattedDate)
+        const filteredButtons = filterButtons(sensors)
+
+        setBtnIndex(0)
+        setButtons(filteredButtons)
+        setSelectedDate(formattedDate)
+        setData(sensors)
+
+        setLoadingSensors(false)
     }
 
     return (
@@ -211,11 +254,7 @@ const Sensors = props => {
                     <Text h1>Sensors</Text>
                     {times ? (
                         <CalendarPicker
-                            onDateChange={date =>
-                                setSelectedDate(
-                                    moment.utc(date).format('D-M-YYYY'),
-                                )
-                            }
+                            onDateChange={date => handleDateChange(date)}
                             disabledDates={date => dateFilter(date)}
                         />
                     ) : (
@@ -223,17 +262,16 @@ const Sensors = props => {
                     )}
 
                     {wifi.name && wifi.name.includes('ESP') ? (
-                        !data ? (
+                        !memoizedSensors || loadingSensors ? (
                             <ActivityIndicator size="large" color="#0000ff" />
-                        ) : data.sensors.length === 0 ? (
+                        ) : memoizedSensors.length === 0 ? (
                             <Text>No data found</Text>
                         ) : (
                             <>
                                 <Text>
-                                    Amount of data points{' '}
-                                    {filteredSensors().length}
+                                    Amount of data points:{' '}
+                                    {memoizedSensors.length}
                                 </Text>
-                                <Text>File is {data.fileSize / 1000} kb</Text>
                                 <Text h4>Temperature</Text>
                                 <ScrollView
                                     horizontal={true}
@@ -251,13 +289,15 @@ const Sensors = props => {
                                 </ScrollView>
                                 <ScrollView horizontal={true}>
                                     <TemperatureChart
-                                        sensors={filteredSensors()}
+                                        sensors={memoizedSensors}
+                                        chartConfig={chartConfig}
                                     />
                                 </ScrollView>
                                 <Text h4>Humidity</Text>
                                 <ScrollView horizontal={true}>
                                     <HumidityChart
-                                        sensors={filteredSensors()}
+                                        sensors={memoizedSensors}
+                                        chartConfig={chartConfig}
                                     />
                                 </ScrollView>
                             </>

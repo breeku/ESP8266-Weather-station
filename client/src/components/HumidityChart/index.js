@@ -4,16 +4,11 @@ import { Text } from 'react-native-elements'
 
 import { LineChart } from 'react-native-chart-kit'
 
-import moment from 'moment'
-
-const HumidityChart = ({ sensors }) => {
-    const dateFormat = d => {
-        return moment.utc(d.timestamp * 1000).format('HH:mm')
-    }
+const HumidityChart = ({ sensors, chartConfig }) => {
     return (
         <LineChart
             data={{
-                labels: sensors.map(x => dateFormat(x)),
+                labels: sensors.map(x => x.timestamp),
                 datasets: [
                     {
                         data: sensors.map(x => x.humidity),
@@ -24,28 +19,14 @@ const HumidityChart = ({ sensors }) => {
             height={270}
             yAxisSuffix="C"
             yAxisInterval={1} // optional, defaults to 1
-            chartConfig={{
-                backgroundColor: '#fcfcfc',
-                backgroundGradientFrom: '#fcfcfc',
-                backgroundGradientTo: '#ebebeb',
-                decimalPlaces: 1, // optional, defaults to 2dp
-                color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-                labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-                style: {
-                    borderRadius: 16,
-                },
-                propsForDots: {
-                    r: '6',
-                    strokeWidth: '2',
-                    stroke: '#fff',
-                },
-            }}
+            chartConfig={chartConfig}
             style={{
                 marginVertical: 16,
                 borderRadius: 16,
             }}
             renderDotContent={({ x, y, index }) => (
                 <Text
+                    key={index}
                     style={{
                         position: 'absolute',
                         paddingTop: y,
