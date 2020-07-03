@@ -17,7 +17,7 @@ const HumidityChart = ({ sensors, chartConfig }) => {
             }}
             width={sensors.length * 50 + 100} // from react-native
             height={270}
-            yAxisSuffix="C"
+            yAxisSuffix="%"
             yAxisInterval={1} // optional, defaults to 1
             chartConfig={chartConfig}
             style={{
