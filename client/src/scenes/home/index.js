@@ -3,7 +3,6 @@ import React, { useState, useCallback } from 'react'
 import {
     StyleSheet,
     View,
-    Dimensions,
     ScrollView,
     SafeAreaView,
     RefreshControl,
@@ -11,9 +10,7 @@ import {
 } from 'react-native'
 import { Text, Button } from 'react-native-elements'
 
-import { useFocusEffect } from '@react-navigation/native'
-
-import { ProgressChart } from 'react-native-chart-kit'
+import { useFocusEffect, useTheme } from '@react-navigation/native'
 
 import { connect } from 'react-redux'
 
@@ -21,6 +18,9 @@ import moment from 'moment'
 
 import { getSystemInfo } from '_services/system'
 import { updateTime } from '_services/time'
+
+import MemoryChart from '_components/MemoryChart'
+import SystemChart from '_components/SystemChart'
 
 const styles = StyleSheet.create({
     root: {
@@ -40,6 +40,20 @@ const Home = props => {
     const [filesystem, setFileSystem] = useState(null)
     const [time, setTime] = useState(null)
     const [refreshing, setRefreshing] = useState(false)
+
+    const { colors } = useTheme()
+
+    const chartConfig = {
+        backgroundColor: colors.background,
+        backgroundGradientFrom: colors.background,
+        backgroundGradientTo: colors.background,
+        decimalPlaces: 1, // optional, defaults to 2dp
+        color: (opacity = 1) => `rgba(175,175,175, ${opacity})`,
+        labelColor: (opacity = 1) => colors.text,
+        style: {
+            borderRadius: 16,
+        },
+    }
 
     const onRefresh = useCallback(async () => {
         setRefreshing(true)
@@ -92,16 +106,22 @@ const Home = props => {
                     />
                 }>
                 <View style={styles.root}>
-                    <Text h1>Home</Text>
+                    <Text h1 style={{ color: colors.text }}>
+                        Home
+                    </Text>
                     {wifi.name && wifi.name.includes('ESP') ? (
                         <>
-                            <Text style={{ color: 'green' }}>
+                            <Text style={{ color: colors.success }}>
                                 ESP Detected!
                             </Text>
                             {memory && filesystem && time ? (
                                 <>
                                     <View style={styles.time}>
-                                        <Text style={{ textAlign: 'center' }}>
+                                        <Text
+                                            style={{
+                                                textAlign: 'center',
+                                                color: colors.text,
+                                            }}>
                                             {`System time:\n
 ${time}\n
 `}
@@ -111,76 +131,19 @@ ${time}\n
                                             onPress={updateTime}
                                         />
                                     </View>
-                                    <Text>Memory</Text>
-                                    <ProgressChart
-                                        data={{
-                                            labels: ['Used', 'Free'], // optional
-                                            data: [
-                                                (memory.start - memory.free) /
-                                                    memory.start,
-                                                memory.free / memory.start,
-                                            ],
-                                        }}
-                                        width={Dimensions.get('window').width}
-                                        height={220}
-                                        strokeWidth={16}
-                                        radius={32}
-                                        chartConfig={{
-                                            backgroundColor: '#fcfcfc',
-                                            backgroundGradientFrom: '#fcfcfc',
-                                            backgroundGradientTo: '#ebebeb',
-                                            decimalPlaces: 1, // optional, defaults to 2dp
-                                            color: (opacity = 1) =>
-                                                `rgba(0, 0, 0, ${opacity})`,
-                                            labelColor: (opacity = 1) =>
-                                                `rgba(0, 0, 0, ${opacity})`,
-                                            style: {
-                                                borderRadius: 16,
-                                            },
-                                            propsForDots: {
-                                                r: '6',
-                                                strokeWidth: '2',
-                                                stroke: '#ffa726',
-                                            },
-                                        }}
-                                        hideLegend={false}
+                                    <Text style={{ color: colors.text }}>
+                                        Memory
+                                    </Text>
+                                    <MemoryChart
+                                        memory={memory}
+                                        chartConfig={chartConfig}
                                     />
-
-                                    <Text>File System</Text>
-                                    <ProgressChart
-                                        data={{
-                                            labels: ['Used', 'Free'], // optional
-                                            data: [
-                                                filesystem.used /
-                                                    filesystem.total,
-                                                (filesystem.total -
-                                                    filesystem.used) /
-                                                    filesystem.total,
-                                            ],
-                                        }}
-                                        width={Dimensions.get('window').width}
-                                        height={220}
-                                        strokeWidth={16}
-                                        radius={32}
-                                        chartConfig={{
-                                            backgroundColor: '#fcfcfc',
-                                            backgroundGradientFrom: '#fcfcfc',
-                                            backgroundGradientTo: '#ebebeb',
-                                            decimalPlaces: 1, // optional, defaults to 2dp
-                                            color: (opacity = 1) =>
-                                                `rgba(0, 0, 0, ${opacity})`,
-                                            labelColor: (opacity = 1) =>
-                                                `rgba(0, 0, 0, ${opacity})`,
-                                            style: {
-                                                borderRadius: 16,
-                                            },
-                                            propsForDots: {
-                                                r: '6',
-                                                strokeWidth: '2',
-                                                stroke: '#ffa726',
-                                            },
-                                        }}
-                                        hideLegend={false}
+                                    <Text style={{ color: colors.text }}>
+                                        File System
+                                    </Text>
+                                    <SystemChart
+                                        filesystem={filesystem}
+                                        chartConfig={chartConfig}
                                     />
                                 </>
                             ) : (

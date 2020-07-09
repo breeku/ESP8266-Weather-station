@@ -1,10 +1,10 @@
 import React from 'react'
 
-import { Text } from 'react-native-elements'
+import { Text, colors } from 'react-native-elements'
 
 import { LineChart } from 'react-native-chart-kit'
 
-const HumidityChart = ({ sensors, chartConfig }) => {
+const HumidityChart = ({ sensors, chartConfig, colors }) => {
     return (
         <LineChart
             data={{
@@ -31,6 +31,7 @@ const HumidityChart = ({ sensors, chartConfig }) => {
                         position: 'absolute',
                         paddingTop: y,
                         paddingLeft: x,
+                        color: colors.text,
                     }}>
                     {sensors[index].humidity}
                 </Text>

@@ -4,21 +4,18 @@ import { StyleSheet, View } from 'react-native'
 
 import { Text, Input, Button } from 'react-native-elements'
 
+import { useTheme } from '@react-navigation/native'
+
 import { RNToasty } from 'react-native-toasty'
 
 import WifiManager from 'react-native-wifi-reborn'
 
 import { postAccessPoint } from '_services/system'
 
-const styles = StyleSheet.create({
-    accessPointInput: {
-        width: '50%',
-    },
-})
-
 const AccessPoint = () => {
     const [accessPoint, setAccessPoint] = useState({})
     const [updatingAccessPoint, setUpdatingAccessPoint] = useState(false)
+    const { colors } = useTheme()
 
     const handleAccessPointUpdate = async () => {
         setUpdatingAccessPoint(true)
@@ -55,13 +52,12 @@ const AccessPoint = () => {
     }
 
     return (
-        <View>
-            <Text h3 style={{ textAlign: 'center' }}>
-                Access Point
-            </Text>
+        <View style={{ marginTop: 20 }}>
             <Input
                 placeholder="SSID"
-                style={styles.accessPointInput}
+                placeholderTextColor={colors.placeholder}
+                style={{ width: '50%' }}
+                inputStyle={{ color: colors.text }}
                 onChangeText={text =>
                     setAccessPoint({
                         ...accessPoint,
@@ -70,8 +66,10 @@ const AccessPoint = () => {
                 }
             />
             <Input
-                placeholder="password"
-                style={styles.accessPointInput}
+                placeholder="Password"
+                placeholderTextColor={colors.placeholder}
+                style={{ width: '50%' }}
+                inputStyle={{ color: colors.text }}
                 onChangeText={text =>
                     setAccessPoint({
                         ...accessPoint,

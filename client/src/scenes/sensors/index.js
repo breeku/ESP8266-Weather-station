@@ -11,7 +11,7 @@ import {
 } from 'react-native'
 import { Text, ButtonGroup } from 'react-native-elements'
 
-import { useFocusEffect } from '@react-navigation/native'
+import { useFocusEffect, useTheme } from '@react-navigation/native'
 
 import { connect } from 'react-redux'
 
@@ -22,7 +22,7 @@ import moment from 'moment'
 import { getSensorData } from '_services/sensors'
 import { getSensorTimes } from '_services/sensors'
 
-import { setWifi } from '_redux/actions/wifiReducer'
+import { setWifi } from '_redux/actions/wifiActions'
 
 import TemperatureChart from '_components/TemperatureChart'
 import HumidityChart from '_components/HumidityChart'
@@ -39,23 +39,6 @@ const styles = StyleSheet.create({
         marginTop: 20,
     },
 })
-
-const chartConfig = {
-    backgroundColor: '#fcfcfc',
-    backgroundGradientFrom: '#fcfcfc',
-    backgroundGradientTo: '#ebebeb',
-    decimalPlaces: 1, // optional, defaults to 2dp
-    color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-    labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-    style: {
-        borderRadius: 16,
-    },
-    propsForDots: {
-        r: '6',
-        strokeWidth: '2',
-        stroke: '#fff',
-    },
-}
 
 const buttonsList = [
     '00:00 - 01:00',
@@ -101,6 +84,25 @@ const Sensors = props => {
     const [loadingSensors, setLoadingSensors] = useState(false)
 
     const btnView = useRef(null)
+
+    const { colors } = useTheme()
+
+    const chartConfig = {
+        backgroundColor: colors.background,
+        backgroundGradientFrom: colors.background,
+        backgroundGradientTo: colors.background,
+        decimalPlaces: 1, // optional, defaults to 2dp
+        color: (opacity = 1) => `rgba(175,175,175, ${opacity})`,
+        labelColor: (opacity = 1) => colors.text,
+        style: {
+            borderRadius: 16,
+        },
+        propsForDots: {
+            r: '6',
+            strokeWidth: '2',
+            stroke: colors.text,
+        },
+    }
 
     const onRefresh = useCallback(async () => {
         setRefreshing(true)
@@ -252,28 +254,33 @@ const Sensors = props => {
                     />
                 }>
                 <View style={styles.sensors}>
-                    <Text h1>Sensors</Text>
+                    <Text h1 style={{ color: colors.text }}>
+                        Sensors
+                    </Text>
                     {times ? (
                         <CalendarPicker
                             onDateChange={date => handleDateChange(date)}
                             disabledDates={date => dateFilter(date)}
+                            textStyle={{ color: colors.text }}
+                            selectedDayColor={colors.primary}
                         />
                     ) : (
-                        <></>
+                        <ActivityIndicator size="large" color="#0000ff" />
                     )}
 
                     {wifi.name && wifi.name.includes('ESP') ? (
                         !memoizedSensors || loadingSensors ? (
                             <ActivityIndicator size="large" color="#0000ff" />
                         ) : memoizedSensors.length === 0 ? (
-                            <Text>No data found</Text>
+                            <Text style={{ color: colors.text }}>
+                                No data found
+                            </Text>
                         ) : (
                             <>
-                                <Text>
+                                <Text style={{ color: colors.text }}>
                                     Amount of data points:{' '}
                                     {memoizedSensors.length}
                                 </Text>
-                                <Text h4>Temperature</Text>
                                 <ScrollView
                                     horizontal={true}
                                     ref={btnView}
@@ -285,26 +292,38 @@ const Sensors = props => {
                                         selectedIndex={btnIndex}
                                         buttons={buttons}
                                         containerStyle={{ height: 50 }}
-                                        buttonStyle={{ padding: 10 }}
+                                        buttonStyle={{
+                                            padding: 10,
+                                            backgroundColor: colors.card,
+                                        }}
                                     />
                                 </ScrollView>
+                                <Text h4 style={{ color: colors.text }}>
+                                    Temperature
+                                </Text>
                                 <ScrollView horizontal={true}>
                                     <TemperatureChart
                                         sensors={memoizedSensors}
                                         chartConfig={chartConfig}
+                                        colors={colors}
                                     />
                                 </ScrollView>
-                                <Text h4>Humidity</Text>
+                                <Text h4 style={{ color: colors.text }}>
+                                    Humidity
+                                </Text>
                                 <ScrollView horizontal={true}>
                                     <HumidityChart
                                         sensors={memoizedSensors}
                                         chartConfig={chartConfig}
+                                        colors={colors}
                                     />
                                 </ScrollView>
                             </>
                         )
                     ) : (
-                        <Text>ESP not detected</Text>
+                        <Text style={{ color: colors.text }}>
+                            ESP not detected
+                        </Text>
                     )}
                 </View>
             </ScrollView>

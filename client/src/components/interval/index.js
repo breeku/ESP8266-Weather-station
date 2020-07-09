@@ -8,24 +8,20 @@ import {
 } from 'react-native'
 import { Text, Input, Button, Slider } from 'react-native-elements'
 
-import { useFocusEffect } from '@react-navigation/native'
+import { useFocusEffect, useTheme } from '@react-navigation/native'
 
 import { connect } from 'react-redux'
 
 import { postInterval } from '_services/interval'
 import { getInterval } from '_services/interval'
 
-const styles = StyleSheet.create({
-    intervalInput: {
-        width: '50%',
-    },
-})
-
 const Interval = props => {
     const { wifi } = props
     const [interval, setInterval] = useState(0)
     const [updatingInterval, setUpdatingInterval] = useState(false)
     const [refreshing, setRefreshing] = useState(false)
+
+    const { colors } = useTheme()
 
     const onRefresh = useCallback(async () => {
         setRefreshing(true)
@@ -62,7 +58,7 @@ const Interval = props => {
     }
 
     return (
-        <SafeAreaView style={styles.root}>
+        <SafeAreaView style={{ marginTop: 20 }}>
             <ScrollView
                 refreshControl={
                     <RefreshControl
@@ -70,9 +66,6 @@ const Interval = props => {
                         onRefresh={onRefresh}
                     />
                 }>
-                <Text h3 style={{ textAlign: 'center' }}>
-                    Interval
-                </Text>
                 <Slider
                     value={interval}
                     onValueChange={value => setInterval(value)}
@@ -80,16 +73,17 @@ const Interval = props => {
                     minimumValue={1}
                     maximumValue={1440}
                 />
-                <Text>Update interval (minutes)</Text>
                 <Input
-                    style={styles.intervalInput}
+                    style={{ width: '50%' }}
+                    label="Update interval (minutes)"
+                    inputStyle={{ color: colors.text }}
                     keyboardType={'numeric'}
                     onChangeText={val =>
                         val > 0 && val < 1440 ? setInterval(parseInt(val)) : 1
                     }>
                     {interval}
                 </Input>
-                <Text style={{ textAlign: 'center' }}>
+                <Text style={{ textAlign: 'center', color: colors.text }}>
                     {`One datapoint is ~60b`}
                 </Text>
                 <Button

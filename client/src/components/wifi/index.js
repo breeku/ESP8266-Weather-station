@@ -18,7 +18,7 @@ import {
     Button,
 } from 'react-native-elements'
 
-import { useFocusEffect } from '@react-navigation/native'
+import { useFocusEffect, useTheme } from '@react-navigation/native'
 
 import { connect } from 'react-redux'
 
@@ -28,8 +28,7 @@ import AsyncStorage from '@react-native-community/async-storage'
 
 import { RNToasty } from 'react-native-toasty'
 
-import { setWifiName } from '_redux/actions/wifiReducer'
-import { setWifiIP } from '_redux/actions/wifiReducer'
+import { setWifi } from '_redux/actions/wifiActions'
 
 import { connectToWifi } from '_services/wifi'
 
@@ -59,12 +58,6 @@ const styles = StyleSheet.create({
         marginTop: 5,
         marginBottom: 5,
     },
-    green: {
-        backgroundColor: 'green',
-    },
-    black: {
-        backgroundColor: 'black',
-    },
 })
 
 const Wifi = props => {
@@ -79,8 +72,9 @@ const Wifi = props => {
         settings.autoWifi || false,
     )
     const [credentials, setCredentials] = useState(settings.credentials)
-
     const [refreshing, setRefreshing] = useState(false)
+
+    const { colors } = useTheme()
 
     const onRefresh = useCallback(async () => {
         setRefreshing(true)
@@ -174,9 +168,6 @@ const Wifi = props => {
                         onRefresh={onRefresh}
                     />
                 }>
-                <Text h3 style={{ textAlign: 'center' }}>
-                    Wifi
-                </Text>
                 <View style={styles.settings}>
                     <CheckBox
                         title="Connect automatically"
@@ -184,12 +175,17 @@ const Wifi = props => {
                         uncheckedIcon="circle-o"
                         checked={autoConnectWifi}
                         onPress={handleAutoWifi}
+                        containerStyle={{
+                            backgroundColor: colors.card,
+                        }}
+                        titleProps={{ style: { color: colors.text } }}
                     />
                     <Icon
                         style={{
                             marginTop: 'auto',
                             marginBottom: 'auto',
                         }}
+                        color={colors.primary}
                         type="material-community"
                         name="settings"
                         onPress={toggleWifiSettingsOverlay}
@@ -249,9 +245,13 @@ const Wifi = props => {
                 ) : (
                     <>
                         {wifiList.length === 0 ? (
-                            <Text>{`
-                  No WiFI networks found!
-                  `}</Text>
+                            <Text
+                                style={{
+                                    textAlign: 'center',
+                                    color: colors.text,
+                                }}>
+                                No WiFI networks found!
+                            </Text>
                         ) : (
                             <>
                                 {wifiList.map((l, i) => (
@@ -261,12 +261,17 @@ const Wifi = props => {
                                             title={l.SSID}
                                             subtitle={l.BSSID}
                                             bottomDivider
-                                            style={[
-                                                styles.listItem,
-                                                wifi.name === l.SSID
-                                                    ? styles.green
-                                                    : styles.black,
-                                            ]}
+                                            style={{
+                                                ...styles.listItem,
+                                                backgroundColor:
+                                                    wifi.name === l.SSID
+                                                        ? colors.success
+                                                        : colors.card,
+                                            }}
+                                            titleStyle={{ color: colors.text }}
+                                            containerStyle={{
+                                                backgroundColor: colors.card,
+                                            }}
                                             onPress={() =>
                                                 wifi.name !== l.SSID
                                                     ? l.capabilities
@@ -317,8 +322,7 @@ const mapStateToProps = state => {
 const mapDispatchToProps = dispatch => {
     // Action
     return {
-        setWifiName: data => dispatch(setWifiName(data)),
-        setWifiIP: data => dispatch(setWifiIP(data)),
+        setWifi: data => dispatch(setWifi(data)),
     }
 } // Exports
 

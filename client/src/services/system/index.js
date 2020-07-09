@@ -4,7 +4,6 @@ export const getSystemInfo = async () => {
     try {
         const response = await fetch('http://192.168.4.1/systeminfo/')
         const json = await response.json()
-        console.log(json)
         return json
     } catch (e) {
         RNToasty.Error({ title: 'Connection failed' })

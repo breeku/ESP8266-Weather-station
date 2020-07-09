@@ -4,7 +4,7 @@ import { Text } from 'react-native-elements'
 
 import { LineChart } from 'react-native-chart-kit'
 
-const TemperatureChart = ({ sensors, chartConfig }) => {
+const TemperatureChart = ({ sensors, chartConfig, colors }) => {
     return (
         <LineChart
             data={{
@@ -31,6 +31,7 @@ const TemperatureChart = ({ sensors, chartConfig }) => {
                         position: 'absolute',
                         paddingTop: y,
                         paddingLeft: x,
+                        color: colors.text,
                     }}>
                     {sensors[index].temperature}
                 </Text>

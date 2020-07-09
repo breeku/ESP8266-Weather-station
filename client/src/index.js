@@ -17,7 +17,7 @@ import WifiManager from 'react-native-wifi-reborn'
 import AsyncStorage from '@react-native-community/async-storage'
 
 import { setSettings } from '_redux/actions/settingsActions'
-import { setWifi } from '_redux/actions/wifiReducer'
+import { setWifi } from '_redux/actions/wifiActions'
 
 import { connectToWifi, getWifiName } from '_services/wifi/'
 
