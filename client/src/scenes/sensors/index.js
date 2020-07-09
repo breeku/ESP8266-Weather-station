@@ -254,9 +254,6 @@ const Sensors = props => {
                     />
                 }>
                 <View style={styles.sensors}>
-                    <Text h1 style={{ color: colors.text }}>
-                        Sensors
-                    </Text>
                     {times ? (
                         <CalendarPicker
                             onDateChange={date => handleDateChange(date)}

@@ -27,10 +27,13 @@ const styles = StyleSheet.create({
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
+        marginTop: 10,
+        marginBottom: 10,
     },
     time: {
         paddingTop: 40,
         paddingBottom: 40,
+        textAlign: 'center',
     },
 })
 
@@ -106,13 +109,10 @@ const Home = props => {
                     />
                 }>
                 <View style={styles.root}>
-                    <Text h1 style={{ color: colors.text }}>
-                        Home
-                    </Text>
                     {wifi.name && wifi.name.includes('ESP') ? (
                         <>
                             <Text style={{ color: colors.success }}>
-                                ESP Detected!
+                                ESP Found!
                             </Text>
                             {memory && filesystem && time ? (
                                 <>
@@ -122,11 +122,17 @@ const Home = props => {
                                                 textAlign: 'center',
                                                 color: colors.text,
                                             }}>
-                                            {`System time:\n
-${time}\n
-`}
+                                            System time:
+                                        </Text>
+                                        <Text
+                                            style={{
+                                                textAlign: 'center',
+                                                color: colors.text,
+                                            }}>
+                                            {time}
                                         </Text>
                                         <Button
+                                            containerStyle={{ marginTop: 10 }}
                                             title="Update"
                                             onPress={updateTime}
                                         />
