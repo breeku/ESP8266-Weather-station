@@ -1,6 +1,6 @@
 # ESP8266-Weather-station
 
-Esp8266 as a WiFI access point storing AM2320 sensor data.
+Esp8266 as a WiFi access point storing AM2320 sensor data.
 
 Using react-native to query and display the data.
 
